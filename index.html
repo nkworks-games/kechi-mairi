@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}</style>
+<meta name="description" content="硬貨を3枚入れたら願いが叶う神社。ただし神様は、500円玉より安い硬貨をはたき落とす。神様をだまして、できるだけ安くお参りするゲーム。">
+<meta name="theme-color" content="#2a120c">
+<title>ケチ参り</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="ケチ参り">
+<meta property="og:description" content="硬貨3枚で願いが叶う神社。でも神様は、500円より安い硬貨をはたき落とす。だまして、いくらで叶えられる？">
+<meta property="og:url" content="https://nkworks-games.com/kechi-mairi/">
+<meta property="og:image" content="https://nkworks-games.com/kechi-mairi/card.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@700;800;900&family=Shippori+Mincho+B1:wght@800&display=swap" rel="stylesheet">
+<style>
+/* ケチ参り：画面は「横360の縦長の舞台」1枚。画面の大きさに合わせて、舞台ごと拡大・縮小する（--s）。舞台の高さ（--h）は、縦長のスマホでは600〜800の間でのびる */
+:root {
+  color-scheme: dark;
+  --ink: #2a1a12;          /* 線と文字（墨） */
+  --paper: #fff6e2;        /* 紙・明るい地 */
+  --wood: #b98045;         /* 木 */
+  --wood-d: #7a4a22;       /* 濃い木 */
+  --shu: #d8452b;          /* 朱色（主役の色） */
+  --gold: #f2c14e;         /* 金 */
+  --night: #1d0f0a;        /* 舞台の外 */
+  --dim: #cdb99c;          /* 弱い文字 */
+  --logo: "Dela Gothic One", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --body: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --fude: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+html { height: 100%; box-sizing: border-box; }
+body { height: 100%; margin: 0; background: var(--night); color: var(--paper); font-family: var(--body); font-weight: 700; font-size: 14px; line-height: 1.5; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; -webkit-appearance: none; appearance: none; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+#app { position: fixed; left: 50%; top: 50%; width: 360px; height: calc(var(--h, 640) * 1px); transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: 50% 50%; overflow: hidden; background: #2a120c; touch-action: none; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ---- 上の表示：願い箱の3枚と、使ったお金 ---- */
+.hud { position: absolute; left: 50px; right: 8px; top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
+.slots { display: flex; align-items: center; gap: 5px; height: 36px; padding: 0 9px 0 8px; border-radius: 12px; background: var(--paper); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); font-size: 11px; font-weight: 800; white-space: nowrap; box-sizing: border-box; }
+.slots i { width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box; border: 2px dashed #b9a688; display: grid; place-items: center; font-style: normal; font-size: 9px; font-weight: 900; color: var(--ink); line-height: 1; }
+.slots i.on { border: 2px solid var(--ink); background: var(--c, #ddd); animation: pop .3s ease-out; }
+.spent { display: flex; align-items: baseline; gap: 3px; height: 36px; padding: 0 10px; border-radius: 12px; background: var(--gold); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); box-sizing: border-box; white-space: nowrap; }
+.spent-l { font-size: 10px; font-weight: 800; align-self: center; }
+.spent b { font-family: var(--logo); font-weight: 400; font-size: 21px; line-height: 34px; font-variant-numeric: tabular-nums; min-width: 1.1em; text-align: right; }
+.spent-u { font-size: 12px; font-weight: 900; }
+.spent.bump { animation: bump .25s ease-out; }
+@keyframes bump { 30% { transform: scale(1.14) rotate(-2deg); } }
+@keyframes pop { from { transform: scale(.3); } 60% { transform: scale(1.25); } to { transform: none; } }
+.mute { position: absolute; left: 8px; top: 8px; width: 36px; height: 36px; border-radius: 12px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; padding: 0; }
+.mute svg { width: 19px; height: 19px; }
+
+/* ---- タイトル ---- */
+.title-panel { position: absolute; left: 14px; right: 14px; top: 52%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 16px 14px 14px; border-radius: 20px; background: rgba(42, 18, 12, .93); border: 2.5px solid var(--ink); box-shadow: 0 0 0 2px var(--gold) inset, 0 8px 0 rgba(0, 0, 0, .35); text-align: center; }
+.kicker { margin: 0; font-size: 13px; font-weight: 800; color: var(--gold); letter-spacing: .08em; }
+.logo { margin: -4px 0 0; font-family: var(--logo); font-weight: 400; font-size: 62px; line-height: 1.1; letter-spacing: .02em; color: var(--paper); text-shadow: 0 4px 0 var(--shu), 0 7px 0 var(--ink); }
+.rules { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; width: 100%; counter-reset: r; text-align: left; font-size: 13px; font-weight: 700; line-height: 1.45; }
+.rules li { counter-increment: r; position: relative; padding: 6px 8px 6px 34px; border-radius: 10px; background: var(--paper); color: var(--ink); text-wrap: pretty; }
+.rules li::before { content: counter(r); position: absolute; left: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 50%; background: var(--shu); color: #fff; font-family: var(--logo); font-size: 12px; line-height: 20px; text-align: center; }
+.rules b { font-weight: 900; color: #b3280f; }
+.wish-row { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; font-size: 12px; font-weight: 800; color: var(--dim); }
+.wish-row input { height: 44px; padding: 0 12px; border-radius: 12px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); font-size: 16px; font-weight: 800; min-width: 0; box-sizing: border-box; -webkit-user-select: text; user-select: text; }
+.wish-row input::placeholder { color: #a8957a; font-weight: 700; }
+.btn { min-height: 46px; padding: 6px 14px; border-radius: 14px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); box-shadow: 0 4px 0 var(--ink); font-weight: 900; font-size: 15px; transition: transform .06s, box-shadow .06s, opacity .2s; }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.btn.primary { background: var(--shu); color: #fff; }
+.btn.big { width: 100%; min-height: 56px; font-family: var(--logo); font-weight: 400; font-size: 22px; letter-spacing: .08em; }
+.btn:disabled { opacity: .5; cursor: default; }
+.best { margin: 0; font-size: 12.5px; font-weight: 800; color: var(--gold); }
+.best b { font-family: var(--logo); font-weight: 400; font-size: 16px; }
+
+/* ---- 遊んでいる間：案内と財布 ---- */
+.hint { position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); margin: 0; padding: 4px 13px; border-radius: 999px; background: rgba(29, 15, 10, .82); color: var(--paper); font-size: 12.5px; font-weight: 800; white-space: nowrap; pointer-events: none; }
+.hint.pop { animation: hintPop .3s ease-out; }
+@keyframes hintPop { from { transform: translateX(-50%) translateY(6px); opacity: 0; } }
+.wallet { position: absolute; left: 6px; right: 6px; bottom: 8px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 7px 6px 5px; border-radius: 16px; background: #5a2f1a; border: 2.5px solid var(--ink); box-shadow: 0 0 0 2px #8a5230 inset; }
+.coin-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; padding: 4px 0 2px; border-radius: 11px; border: 2px solid transparent; background: transparent; color: var(--paper); transition: transform .1s, background .1s; }
+.coin-btn .face { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; box-sizing: border-box; border: 2.5px solid var(--ink); background: var(--c); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .18), inset 0 2px 0 rgba(255, 255, 255, .45); font-family: var(--logo); font-size: 13px; line-height: 1; color: var(--ink); position: relative; }
+.coin-btn .face.hole::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #5a2f1a; border: 2px solid var(--ink); box-sizing: border-box; }      /* 穴は ど真ん中 */
+.coin-btn .face.hole { place-items: end center; padding-bottom: 2px; font-size: 10px; }      /* 数字は穴の下 */
+.coin-btn .left { font-size: 11px; font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.coin-btn[aria-pressed="true"] { background: rgba(242, 193, 78, .22); border-color: var(--gold); transform: translateY(-4px); }
+.coin-btn:disabled { opacity: .28; cursor: default; }
+.coin-btn.used .face { animation: bump .2s ease-out; }
+
+/* ---- 結果 ---- */
+.result { position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; text-align: center; }
+.rank-desc { margin: 0; font-size: 14px; font-weight: 800; text-wrap: balance; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); }
+.tally { margin: 0 0 4px; font-size: 12px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.actions .primary { grid-column: 1 / -1; min-height: 52px; font-family: var(--logo); font-weight: 400; font-size: 19px; letter-spacing: .06em; }
+.link-btn { align-self: center; min-height: 34px; padding: 4px 12px; border: 0; background: transparent; color: var(--dim); font-size: 12.5px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.fade-in { animation: fadeUp .4s ease-out backwards; }
+@keyframes fadeUp { from { transform: translateY(10px); opacity: 0; } }
+
+.turn-note { position: absolute; left: 0; right: 0; top: 50px; margin: 0; text-align: center; font-size: 12px; font-weight: 800; color: var(--gold); pointer-events: none; }
+.toast { pointer-events: none; position: absolute; left: 50%; top: 56px; transform: translateX(-50%); max-width: 320px; padding: 8px 14px; border-radius: 12px; background: var(--paper); color: var(--ink); border: 2.5px solid var(--ink); font-weight: 800; font-size: 12.5px; text-align: center; z-index: 5; animation: fadeUp .25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .slots i.on, .spent.bump, .hint.pop, .fade-in, .toast, .coin-btn.used .face { animation: none; } .btn, .coin-btn { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app" data-screen="boot">
+  <canvas id="cv" role="img" aria-label="神社の賽銭箱と神様"></canvas>
+  <div class="hud" id="hud" hidden>
+    <div class="slots" id="slots" aria-label="願い箱に入った硬貨"></div>
+    <div class="spent"><span class="spent-l">使ったお金</span><b id="spent">0</b><span class="spent-u">円</span></div>
+  </div>
+  <button id="btnMute" class="mute" type="button" aria-label="音を消す" aria-pressed="false"></button>
+  <section class="title-panel" id="pTitle" hidden>
+    <p class="kicker">硬貨3枚で願いが叶う神社</p>
+    <h1 class="logo">ケチ参り</h1>
+    <ol class="rules">
+      <li>願い箱に硬貨を<b>3枚</b>入れると、願いが叶う</li>
+      <li>でも神様は、<b>500円より安い硬貨</b>をはたき落とす</li>
+      <li>だまして<b>安く</b>入れよう。ただし<b>同じ手は2度通じない</b></li>
+    </ol>
+    <label class="wish-row" for="wish"><span>願い事（書かなくてもOK）</span>
+      <input id="wish" type="text" maxlength="14" autocomplete="off" enterkeyhint="done" placeholder="例：テストで100点"></label>
+    <button id="btnStart" class="btn primary big" type="button" disabled>お参りする</button>
+    <p class="best" id="best" hidden></p>
+  </section>
+  <p class="hint" id="hint" aria-live="polite" hidden></p>
+  <div class="wallet" id="wallet" role="group" aria-label="財布（投げる硬貨をえらぶ）" hidden></div>
+  <section class="result" id="pResult" hidden>
+    <p class="rank-desc" id="rankDesc"></p>
+    <p class="tally" id="tally"></p>
+    <div class="actions">
+      <button id="btnSave" class="btn" type="button">画像を保存</button>
+      <button id="btnShare" class="btn" type="button">シェア</button>
+      <button id="btnAgain" class="btn primary" type="button">もう1回</button>
+    </div>
+    <button id="btnTitle" class="link-btn" type="button">願い事を書き直す</button>
+  </section>
+  <p class="turn-note" id="turnNote" hidden>スマホは縦向きがおすすめです</p>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+<script>
+'use strict';
+/* ============================================================
+   ケチ参り：ゲームのしくみ（硬貨・財布・神様）
+   画面や音とは別にしてあるので、この部分だけで自動テストができます。
+   長さの単位は「歩幅」くらいの目安：x＝左右（まん中が0）、y＝高さ、z＝奥行き（手元が0、奥ほど大きい）
+   ============================================================ */
+const KECHI = (() => {
+  /* ---------- 調整できる数字 ---------- */
+  const NEED = 3;                         // 願い箱に入れる枚数
+  /* 硬貨：金額、財布に入っている枚数、見た目、神様が「安い」と見ぬくまでの遅れ（秒）。銀色の硬貨は500円玉と見分けにくいので、少し遅れる */
+  const COINS = [
+    { id: 'y1', v: 1, n: 5, look: 'alumi', hole: false, r: 0.085, delay: 0 },
+    { id: 'y5', v: 5, n: 3, look: 'brass', hole: true, r: 0.092, delay: 0.02 },
+    { id: 'y10', v: 10, n: 3, look: 'copper', hole: false, r: 0.098, delay: 0.05 },
+    { id: 'y50', v: 50, n: 3, look: 'silver', hole: true, r: 0.09, delay: 0.2 },
+    { id: 'y100', v: 100, n: 3, look: 'silver', hole: false, r: 0.096, delay: 0.3 },
+    { id: 'y500', v: 500, n: 3, look: 'gold', hole: false, r: 0.11, delay: 0 },
+  ];
+  const BIG = COINS.length - 1;           // 500円玉の番号
+  const GRAV = 6;                         // 重力
+  const START = { x: 0, y: 0.15, z: 0 };  // 硬貨を投げ出す場所
+  const NEAR = { x0: -0.66, x1: 0.66, z0: 0.7, z1: 1.4, top: 0.45 };   // 手前の箱（はじかれた硬貨が落ちる）
+  const FAR = { x0: -0.58, x1: 0.58, z0: 3.3, z1: 3.9, top: 0.6 };     // 奥の箱（願い箱）
+  const Z_NOTICE = 1.6;                   // 硬貨がここより奥に来ると、神様の目に入る
+  const Z_GUARD = 3.0;                    // 神様の手が待ちかまえている所（願い箱のすぐ手前）
+  const REACH = 0.24;                     // 手がとどく左右の幅
+  const AIM = 0.55;                       // はじいた向きが、どれくらい左右のずれになるか
+  const COOL = 0.22;                      // 続けて投げる時の、最低の間（秒）
+  /* 鈴：神様の左上につるしてある。強くはじいた硬貨が当たると鳴って、神様がそっちを見る（1回のお参りで1度だけ）。
+     r＝当たる幅　sweet＝ど真ん中の幅（当たった硬貨が、はね返ってそのまま願い箱に入る）　away＝神様が鈴を見ている秒数 */
+  const BELL = { x: -0.72, y: 1.3, z: 3.4, r: 0.25, sweet: 0.07, away: 1.6 };
+  /* おでこ：強くまっすぐはじいた硬貨が神様の顔に当たる。r＝おでこ（はね返って願い箱に落ちる）の幅　face＝顔（当たるだけ）の幅 */
+  const HEAD = { r: 0.4, face: 0.52 };
+  /* はじく強さ（1がちょうど良い）と、落ちる場所 */
+  const P_NEAR = 0.62;                    // これより弱いと、手前の箱のあたりに落ちる
+  const P_GOOD0 = 0.78, P_GOOD1 = 1.7;    // この間なら、願い箱までとどく。強すぎると箱をこえる
+  /* 神様の本気度（願い箱に入っている枚数で上がる）：
+     hands＝手の数　speed＝手の速さ　recover＝はたいた後のすき（秒）　gap＝次のあくび・よそ見までの間（秒）
+     tell＝前ぶれの長さ　away＝目をはなしている長さ　fake＝「ふり」をする割合　silver＝銀色の硬貨にだまされる度合い
+     いちばん下の段は、おでこに硬貨を当てられて怒った時だけ出てくる */
+  const LEVELS = [
+    { hands: 1, speed: 1.8, recover: 0.55, gap: [2.4, 4.2], tell: 0.5, away: 1.3, fake: 0, silver: 1 },
+    { hands: 1, speed: 2.7, recover: 0.36, gap: [3.0, 5.2], tell: 0.38, away: 0.9, fake: 0.25, silver: 1 },
+    { hands: 2, speed: 2.6, recover: 0.4, gap: [3.2, 5.6], tell: 0.32, away: 0.8, fake: 0.35, silver: 1 },
+    { hands: 2, speed: 3.2, recover: 0.3, gap: [3.4, 5.8], tell: 0.28, away: 0.7, fake: 0.45, silver: 1 },
+  ];
+  const FIRST_GAP = [1.3, 2.1];           // 最初の「すき」は早めに来る（遊び方に気づけるように）
+  const FAKE_HOLD = 0.3;                  // 「ふり」をしている長さ
+  /* 手口：安い硬貨が願い箱に入った時の「入れ方」。once＝神様が覚えるので1回しか通じない（お金を余分に使う手口は、何回でも使える） */
+  const TRICKS = {
+    gap: { name: 'すき', once: true },        // あくび・よそ見のすきに入れた
+    bonk: { name: 'おでこ', once: true },     // おでこに当てて、はね返りで入れた
+    bell: { name: '鈴', once: true },         // 鈴を鳴らして、神様が見ているうちに入れた
+    decoy: { name: 'おとり', once: false },   // ほかの硬貨で手をふさいで入れた
+    silver: { name: '銀', once: false },      // 銀色の硬貨を500円玉と見まちがえさせた
+    big: { name: '500', once: false },        // 500円玉をはらった
+  };
+  /* 称号：使ったお金がこの金額以下なら、その称号 */
+  const RANKS = [
+    { max: 3, name: '伝説のドケチ', desc: '1円玉3枚。これ以上は、まけられない' },
+    { max: 10, name: 'ケチの神', desc: '神様より、あなたのほうが神' },
+    { max: 50, name: '倹約の達人', desc: 'ワンコインにも満たないお参り' },
+    { max: 350, name: 'やりくり上手', desc: '銀色の硬貨で、うまく切りぬけた' },
+    { max: 600, name: 'ふつうの参拝客', desc: '最後は500円玉にたよった' },
+    { max: 1200, name: '気前のいい人', desc: '神様もにっこり' },
+    { max: 1e9, name: '神様のお得意さま', desc: '財布がすっかり軽くなった' },
+  ];
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t;
+  function rng(seed) { let a = seed >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const rankOf = yen => RANKS.find(r => yen <= r.max);
+  const TOTAL = COINS.reduce((s, c) => s + c.v * c.n, 0);
+
+  /* ---------- はじめる ---------- */
+  function newGame(seed) {
+    const g = { seed: seed >>> 0 || 1, t: 0, wallet: COINS.map(c => c.n), spent: 0, thrown: 0, inCount: 0, inCoins: [], level: 0, coins: [], nextId: 1, cool: 0, done: false, doneAt: 0,
+      hands: [{ x: 0, rest: 0, state: 'idle', t: 0, coin: null, wait: 0 }], att: { mode: 'watch', kind: '', t: 0, dur: 0, side: 1, fake: false }, gap: 0, silverFooled: 0, ev: [],
+      inVia: [], burn: { gap: false, bonk: false, bell: false }, bell: 'ready', anger: 0,      // inVia＝入った硬貨の手口　burn＝もう通じない手口　bell＝鈴（ready → rung → gone）　anger＝おでこに当てられた回数
+      count: { swat: 0, pass: 0, near: 0, ground: 0, over: 0 } };
+    g.rand = rng(g.seed); g.gap = lerp(FIRST_GAP[0], FIRST_GAP[1], g.rand()); return g;
+  }
+  const LV = g => LEVELS[g.level];
+  const say = (g, key) => g.ev.push({ type: 'say', key });
+
+  /* ---------- 投げる ----------
+     angle＝はじいた向き（まっすぐ上が0、右がプラス。ラジアン）　power＝強さ（1がちょうど良い） */
+  function plan(angle, power, st) {      // st＝{ bell: 鈴がまだあるか, helmet: 神様がかぶとをかぶっているか, plain: 鈴やおでこを考えない（500円玉） }
+    const p = clamp(power, 0.2, 2.4), a = clamp(angle, -1, 1), side = Math.tan(a) * AIM; let band, zt, sweet = false;
+    if (p < P_NEAR) { band = 'near'; zt = lerp(0.82, 1.28, p / P_NEAR); }
+    else if (p < P_GOOD0) { band = 'gap'; zt = lerp(1.9, 2.7, (p - P_NEAR) / (P_GOOD0 - P_NEAR)); }
+    else if (p <= P_GOOD1) { band = 'far'; zt = clamp(3.6 + (p - 1.1) * 0.4, 3.42, 3.8); }
+    else { band = 'over'; zt = 4.5; }
+    let xt = zt * side, land, yt;
+    if (band === 'near') { land = xt >= NEAR.x0 && xt <= NEAR.x1 ? 'near' : 'ground'; yt = land === 'near' ? NEAR.top : 0; }
+    else if (band === 'gap') { land = 'ground'; yt = 0; }
+    else if (band === 'far') { land = xt >= FAR.x0 && xt <= FAR.x1 ? 'in' : 'ground'; yt = land === 'in' ? FAR.top : 0; }
+    else {      // 強くはじいた硬貨：鈴 → おでこ → どちらでもなければ箱をこえて失う
+      const off = BELL.z * side - BELL.x, plain = st && st.plain;
+      if (!plain && !(st && st.bell === false) && Math.abs(off) <= BELL.r) { land = 'bell'; zt = BELL.z; xt = BELL.z * side; yt = BELL.y; sweet = Math.abs(off) <= BELL.sweet; }
+      else if (!plain && Math.abs(xt) <= HEAD.r) { land = st && st.helmet ? 'helmet' : 'bonk'; yt = 1.25; }
+      else { land = 'over'; yt = 1.25; }
+    }
+    const T = 0.52 + 0.105 * zt;
+    return { band, land, sweet, xt, zt, yt, T, vx: (xt - START.x) / T, vz: (zt - START.z) / T, vy: (yt - START.y + 0.5 * GRAV * T * T) / T };
+  }
+  const bigOnWay = g => g.coins.reduce((n, c) => n + ((c.big && (c.state === 'fly' || c.state === 'held' || c.state === 'wait')) || (c.state === 'bounce' && c.next === 'in') ? 1 : 0), 0);      // もう入ることが決まっている硬貨（500円玉・はね返って箱に向かっている硬貨）
+  const settled = g => g.inCount + bigOnWay(g) >= NEED;      // もう3枚目まで決まっている（500円玉が箱に向かっている途中）。これ以上は投げさせない
+  const canThrow = (g, ci) => !g.done && g.cool <= 0 && g.wallet[ci] > 0 && !settled(g);
+  function throwCoin(g, ci, angle, power) {
+    if (!canThrow(g, ci)) return null;
+    const def = COINS[ci], p = plan(angle, power, { bell: g.bell === 'ready', helmet: g.burn.bonk, plain: ci === BIG });
+    const c = { id: g.nextId++, ci, v: def.v, big: ci === BIG, state: 'fly', t: 0, T: p.T, x0: START.x, y0: START.y, z0: START.z, vx: p.vx, vy: p.vy, vz: p.vz, x: START.x, y: START.y, z: START.z,
+      band: p.band, land: p.land, sweet: p.sweet, via: '', late: '', xg: p.vx * (Z_GUARD / p.vz), tg: Z_GUARD / p.vz, noticed: false, noticedAt: 0, hand: null, passed: false, spin: g.rand() * 6.28 };
+    g.wallet[ci]--; g.spent += def.v; g.thrown++; g.cool = COOL; g.coins.push(c); g.ev.push({ type: 'throw', coin: c });
+    return c;
+  }
+  function fling(c, x1, y1, z1, T) {      // いまの場所から (x1,y1,z1) へ、T秒で山なりに飛ばす
+    c.x0 = c.x; c.y0 = c.y; c.z0 = c.z; c.t = 0; c.T = T; c.vx = (x1 - c.x) / T; c.vz = (z1 - c.z) / T; c.vy = (y1 - c.y + 0.5 * GRAV * T * T) / T;
+  }
+  const place = c => { c.x = c.x0 + c.vx * c.t; c.z = c.z0 + c.vz * c.t; c.y = c.y0 + c.vy * c.t - 0.5 * GRAV * c.t * c.t; };
+
+  /* ---------- 神様の目：見張り → 前ぶれ → あくび・よそ見（または「ふり」）→ 見張り ---------- */
+  function attention(g, dt) {
+    const a = g.att, L = LV(g);
+    if (g.done) { a.mode = 'watch'; return; }
+    a.t += dt;
+    if (a.mode === 'watch') {
+      if (g.burn.gap) return;      // 一度すきを突かれたので、もう あくびも よそ見もしない
+      g.gap -= dt;
+      if (g.gap <= 0) { a.mode = 'tell'; a.t = 0; a.dur = L.tell; a.kind = g.rand() < 0.6 ? 'yawn' : 'look'; a.side = g.rand() < 0.5 ? -1 : 1; a.fake = g.rand() < L.fake; g.ev.push({ type: 'att', mode: 'tell', kind: a.kind, fake: a.fake, side: a.side }); }
+    } else if (a.mode === 'tell') {
+      if (a.t >= a.dur) { a.t = 0; if (a.fake) { a.mode = 'fake'; a.dur = FAKE_HOLD; } else { a.mode = 'away'; a.dur = L.away; } g.ev.push({ type: 'att', mode: a.mode, kind: a.kind, side: a.side }); }
+    } else if (a.t >= a.dur) backToWatch(g, a.mode === 'fake' ? 'fake' : 'end');
+  }
+  function backToWatch(g, why) {
+    const a = g.att, L = LV(g); if (a.mode === 'watch') return;
+    a.mode = 'watch'; a.t = 0; g.gap = lerp(L.gap[0], L.gap[1], g.rand()); g.ev.push({ type: 'att', mode: 'watch', why });
+    if (g.bell === 'rung') { g.bell = 'gone'; g.burn.bell = true; g.ev.push({ type: 'bellGone' }, { type: 'burn', key: 'bell' }); }      // 鈴でだまされたと気づいて、鈴を取り上げる
+  }
+  const watching = g => g.att.mode !== 'away';      // 「前ぶれ」と「ふり」の間は、まだ見ている
+
+  /* ---------- 神様の手 ---------- */
+  function setHands(g) {      // 本気度に合わせて、手の数と待つ場所を決める
+    const n = LV(g).hands;
+    while (g.hands.length < n) { g.hands.push({ x: 0.9, rest: 0, state: 'idle', t: 0, coin: null, wait: 0 }); g.ev.push({ type: 'hand2' }); }
+    g.hands.forEach((h, i) => { h.rest = n === 1 ? 0 : i === 0 ? -0.3 : 0.3; });
+  }
+  function freeHand(g, x) { let best = null, bd = 1e9; for (const h of g.hands) if (h.state === 'idle') { const d = Math.abs(h.x - x); if (d < bd) { bd = d; best = h; } } return best; }
+  function hands(g, dt) {
+    const L = LV(g);
+    for (const h of g.hands) {
+      h.t += dt;
+      if (h.state === 'idle') { const d = h.rest - h.x, s = L.speed * 0.6 * dt; h.x += Math.abs(d) <= s ? d : Math.sign(d) * s; }
+      else if (h.state === 'chase') {
+        const c = h.coin; if (!c || c.state !== 'fly' || c.passed) { h.state = 'idle'; h.coin = null; continue; }
+        if (h.wait > 0) h.wait -= dt; else { const d = c.xg - h.x, s = L.speed * dt; h.x += Math.abs(d) <= s ? d : Math.sign(d) * s; }
+      }
+      else if (h.state === 'recover') { if (h.t >= L.recover) { h.state = 'idle'; h.t = 0; } }
+      else if (h.state === 'grab') {      // 500円玉をつかみに行く（手がのびる）
+        const c = h.coin; if (h.t >= h.wait) { c.state = 'held'; c.hand = h; h.state = 'carry'; h.t = 0; h.fromX = c.x; h.fromY = c.y; h.fromZ = c.z; g.ev.push({ type: 'grab', coin: c }); }
+      }
+      else if (h.state === 'carry') {     // つかんだ500円玉を、自分で願い箱に入れる
+        const c = h.coin, k = clamp(h.t / 0.45, 0, 1); c.x = lerp(h.fromX, clamp(h.fromX, FAR.x0 + 0.15, FAR.x1 - 0.15) * 0.5, k); c.z = lerp(h.fromZ, 3.6, k); c.y = lerp(h.fromY, FAR.top + 0.25, k) + Math.sin(k * Math.PI) * 0.25; h.x = c.x;
+        if (k >= 1) { h.state = 'recover'; h.t = 0; h.coin = null; enter(g, c); }
+      }
+    }
+  }
+  /* 500円玉：空いている手（なければ、いちばん早く空く手）が取りに行く。安い硬貨を追っていた手も、500円玉を見たらそっちへ行く */
+  function wantBig(g, c) {
+    let h = null, bd = 1e9; for (const k of g.hands) if (k.state === 'idle' || k.state === 'chase' || k.state === 'recover') { const d = Math.abs(k.x - c.x) + (k.state === 'idle' ? 0 : 0.2); if (d < bd) { bd = d; h = k; } }
+    if (!h) return false;
+    if (h.state === 'chase' && h.coin) { h.coin.hand = null; }
+    const left = c.state === 'fly' ? Math.max(0.12, c.T * 0.55 - c.t) : 0.3;      // 飛んでいる途中でつかむ。もう落ちていたら、拾いに行く
+    h.state = 'grab'; h.coin = c; h.t = 0; h.wait = left; c.hand = h; return true;
+  }
+
+  /* ---------- 鈴に当たった・おでこに当たった ---------- */
+  function bounce(c, next, x1, y1, z1, T) { c.state = 'bounce'; c.next = next; fling(c, x1, y1, z1, T); }      // はね返って飛ぶ（next＝落ちた先：'in' なら願い箱、'ground' なら床）
+  function ringBell(g, c) {
+    const a = g.att; g.bell = 'rung'; a.mode = 'away'; a.kind = 'bell'; a.side = -1; a.fake = false; a.t = 0; a.dur = BELL.away;
+    g.ev.push({ type: 'bell', coin: c, sweet: c.sweet }, { type: 'att', mode: 'away', kind: 'bell', side: -1 });
+    if (c.sweet) { c.via = 'bell'; bounce(c, 'in', lerp(c.x, 0, 0.6), FAR.top, 3.62, 0.5); }      // ど真ん中：はね返って、そのまま願い箱へ
+    else bounce(c, 'ground', c.x - 0.3, 0, 2.6, 0.62);
+  }
+  function bonk(g, c) {      // おでこに当たった：はね返って願い箱へ。神様はすぐ かぶとをかぶるので、2枚目からは通じない
+    c.via = 'bonk'; g.burn.bonk = true; g.ev.push({ type: 'bonk', coin: c }); if (g.inCount + 1 < NEED) g.ev.push({ type: 'burn', key: 'bonk' }); say(g, 'ouch'); bounce(c, 'in', c.x * 0.4, FAR.top, 3.62, 0.45);
+  }
+  const helmet = (g, c) => { g.ev.push({ type: 'helmet', coin: c }); say(g, 'helmet'); bounce(c, 'ground', (c.x >= 0 ? 1 : -1) * 1.1, 0, 3.0, 0.6); };      // かぶとにはじかれる
+
+  /* ---------- 願い箱に入った ---------- */
+  function enter(g, c) {
+    const via = c.big ? 'big' : (c.via || 'gap');
+    c.state = 'in'; g.inCount++; g.inCoins.push(c.v); g.inVia.push(via); g.ev.push({ type: 'in', coin: c, cheap: !c.big, count: g.inCount, via });
+    if (!c.big) { g.count.pass++; if (COINS[c.ci].look === 'silver') g.silverFooled++; }
+    if (via === 'bonk') g.anger++;
+    if (via === 'gap' && !g.burn.gap) { g.burn.gap = true; if (g.inCount < NEED) g.ev.push({ type: 'burn', key: 'gap' }); }      // 神様は、同じ手口を2度は食わない
+    if (g.inCount >= NEED) { g.done = true; g.doneAt = g.t; g.ev.push({ type: 'done', spent: g.spent }); return; }
+    const before = g.level; g.level = Math.min(LEVELS.length - 1, g.inCount + g.anger); if (g.level !== before) { setHands(g); g.ev.push({ type: 'level', level: g.level }); }
+    if (!c.big) { backToWatch(g, 'clink'); say(g, g.level >= 3 ? 'angry3' : g.level === 2 ? 'angry2' : 'angry1'); }      // チャリンという音で、神様は目をさます
+    else say(g, 'thanks');
+  }
+
+  /* ---------- 1コマ進める ---------- */
+  function step(g, dt) {
+    g.t += dt; if (g.cool > 0) g.cool -= dt;
+    attention(g, dt);
+    const L = LV(g), see = watching(g);
+    for (const c of g.coins) {
+      if (c.state === 'fly') {
+        const zb = c.z; c.t += dt; place(c);
+        if (c.big) { if (!c.hand) wantBig(g, c); }
+        else if (c.land === 'in' && !c.passed) {      // 願い箱に入りそうな安い硬貨だけ、神様は気にする
+          if (!c.noticed && !see && !c.late && c.z >= Z_NOTICE) c.late = g.att.kind === 'bell' ? 'bell' : 'gap';      // 目をはなしている間に、ここまで来た
+          if (!c.noticed && see && c.z >= Z_NOTICE) { c.noticed = true; c.noticedAt = g.t; g.ev.push({ type: 'notice', coin: c }); }
+          if (c.noticed && !c.hand) { const h = freeHand(g, c.xg); if (h) { const d = COINS[c.ci].delay * (COINS[c.ci].look === 'silver' ? L.silver : 1); h.state = 'chase'; h.coin = c; h.t = 0; h.wait = Math.max(0, c.noticedAt + d - g.t); c.hand = h; } }
+          if (zb < Z_GUARD && c.z >= Z_GUARD) {      // 手が待っている所を通る瞬間
+            const h = c.hand;
+            if (h && h.state === 'chase' && h.wait <= 0 && Math.abs(h.x - c.xg) <= REACH) {      // はたき落とす → 手前の箱へ
+              h.state = 'recover'; h.t = 0; h.coin = null; c.hand = null; c.state = 'swat'; g.count.swat++;
+              fling(c, clamp(c.x * 0.5 + (g.rand() - 0.5) * 0.5, NEAR.x0 + 0.15, NEAR.x1 - 0.15), NEAR.top, lerp(NEAR.z0 + 0.15, NEAR.z1 - 0.15, g.rand()), 0.55);
+              g.ev.push({ type: 'swat', coin: c, hand: g.hands.indexOf(h) }); say(g, c.v >= 50 ? 'swatSilver' : 'swat');
+            } else {
+              c.passed = true;
+              /* どの手口で通ったか：気づかれなかった（すき・鈴）→ 手がふさがっていた（おとり）→ 銀色で見まちがえた → 手が間に合わなかった（おとり） */
+              c.via = !c.noticed ? (g.att.kind === 'bell' ? 'bell' : 'gap') : c.late ? c.late : !h ? 'decoy' : COINS[c.ci].look === 'silver' && !g.hands.some(k => k !== h && k.state !== 'idle') ? 'silver' : 'decoy';
+              if (h) { h.state = 'idle'; h.coin = null; c.hand = null; }
+              g.ev.push({ type: 'pass', coin: c, seen: c.noticed }); if (c.noticed) say(g, COINS[c.ci].look === 'silver' && !g.hands.some(k => k.state === 'recover') ? 'fooled' : 'tooSlow');
+            }
+          }
+        }
+        if (c.state === 'fly' && c.t >= c.T) {      // 落ちた
+          c.t = c.T; place(c);
+          if (c.big) { c.state = 'wait'; if (c.land === 'in') { if (c.hand) { c.hand.state = 'idle'; c.hand.coin = null; c.hand = null; } enter(g, c); } }      // 500円玉：自分で箱に入ればそのまま。外れた時は、神様が拾いに来る
+          else if (c.land === 'in') enter(g, c);
+          else if (c.land === 'bell') { if (g.bell === 'ready') ringBell(g, c); else bounce(c, 'ground', c.x - 0.3, 0, 2.6, 0.62); }      // もう鳴ったあとの鈴に当たっても、何も起きない
+          else if (c.land === 'bonk') { if (g.burn.bonk) helmet(g, c); else bonk(g, c); }
+          else if (c.land === 'helmet') helmet(g, c);
+          else { const face = c.land === 'over' && Math.abs(c.x) <= HEAD.face; c.state = c.land; g.count[c.land]++; g.ev.push({ type: c.land, coin: c, face }); if (face) say(g, 'ouch'); }
+        }
+      } else if (c.state === 'swat') {
+        c.t += dt; place(c); if (c.t >= c.T) { c.t = c.T; place(c); c.state = 'near'; g.count.near++; g.ev.push({ type: 'near', coin: c, swatted: true }); }
+      } else if (c.state === 'bounce') {
+        c.t += dt; place(c); if (c.t >= c.T) { c.t = c.T; place(c); if (c.next === 'in') enter(g, c); else { c.state = 'ground'; g.count.ground++; g.ev.push({ type: 'ground', coin: c, lost: true }); } }
+      } else if (c.state === 'wait') { if (!c.hand) wantBig(g, c); }
+    }
+    hands(g, dt);
+  }
+  return { NEED, COINS, BIG, GRAV, START, NEAR, FAR, BELL, HEAD, TRICKS, Z_NOTICE, Z_GUARD, REACH, AIM, COOL, P_NEAR, P_GOOD0, P_GOOD1, LEVELS, RANKS, TOTAL, rng, clamp, lerp, rankOf, newGame, plan, canThrow, settled, throwCoin, step, watching };
+})();
+
+/* ============================================================
+   ケチ参り：画面・操作・音
+   ============================================================ */
+const APP = (() => {
+  /* ---------- 設定（ここを書き換えると調整できます） ---------- */
+  const GAME_TITLE = 'ケチ参り';
+  const HASHTAG = '#ケチ参り';
+  const CREDIT = 'N.K. Works';
+  const SHARE_URL = 'https://nkworks-games.com/kechi-mairi/';      // 公開している場所（シェア文と画像に入る）
+  const WISH_MAX = 14;                  // 願い事の最大文字数
+  const FLICK_IDEAL = 1000;             // 「ちょうど良い強さ」になる、はじく速さ（舞台の上での1秒あたりの長さ）
+  const FLICK_MIN_UP = 22, FLICK_MIN_SPEED = 180;      // これより短い・おそい動きは「はじいた」とみなさない
+  const END_WAIT = 2.1;                 // 3枚入ってから結果が出るまでの間（秒）
+  const SAVE_BEST = 'kechi_best', SAVE_MUTE = 'kechi_mute';
+  /* 神様のせりふ（どれか1つが出る） */
+  const LINES = {
+    swat: ['安い！', 'ケチくさい！', '500円からじゃ', 'おとといおいで', 'それは受けとれん'],
+    swatSilver: ['おしい、もっと出せ', '銀色でもダメじゃ'],
+    tooSlow: ['手が足りん！', 'しまった！', 'ま、まにあわん'],
+    fooled: ['500円玉…ではない！', 'だまされた！'],
+    angry1: ['ぬぬ…本気を出すぞ'], angry2: ['両手で守るぞ！'], angry3: ['もう ゆるさん！'],
+    thanks: ['まいどあり', '話がわかるのう', 'よしよし'],
+    ouch: ['いたっ', 'わしに当てるな'], helmet: ['もう当たらんぞ', 'かぶとじゃ'],
+    bell: ['ん？ 鈴が…', 'だれじゃ？'], bellGone: ['鈴は没収じゃ'], burnGap: ['もう あくびは せんぞ', '目が さえたわい'], burnBonk: ['かぶとを かぶったぞ'],
+    yawn: ['ふぁ〜あ'], look: ['お、ちょうちょ'], gotcha: ['ひっかかったな'], done: ['…願い、聞きとどけた'],
+  };
+  const MSG = { pick: '硬貨をえらんで、上にはじこう', slow: 'もっとすばやく、上にはじこう', empty: 'その硬貨は、もうないよ', weak: '弱いと、手前の箱に落ちるよ', strong: '強すぎ！ 箱をこえた', side: '横にそれた。箱をねらおう',
+    strong2: '強すぎ！ でも、何かに当たれば…', bellRing: '鳴った！ 見ているうちに、もう1枚',
+    burnGap: '「すき」は、もう通じない', burnBonk: '「おでこ」は、もう通じない', burnBell: '「鈴」は、もう使えない',
+    tipYawn: '神様が目をはなした時が、ねらい目', tipDecoy: '続けて投げると、手が追いつかないかも', tipSilver: '銀色の硬貨は、500円玉に見えるかも',
+    tipStrong: '思いきり強くはじくと、何か起きるかも', tipBell: '左上の鈴に当てると、神様がよそ見する' };      // tip〜は、うまくいかない時に1回ずつ出すヒント
+  /* 手口の名前：stamp＝絵馬のハンコ　long＝シェアの文　shout＝入った時に出る字 */
+  const VIA = {
+    gap: { stamp: 'すき', long: 'すき', shout: 'すきあり！' }, bonk: { stamp: 'おでこ', long: 'おでこ当て', shout: 'おでこ当て！' }, bell: { stamp: '鈴', long: '鈴', shout: '鈴だまし！' },
+    decoy: { stamp: 'おとり', long: 'おとり', shout: 'おとり成功！' }, silver: { stamp: '銀', long: '銀色だまし', shout: '銀だまし！' }, big: { stamp: '500', long: '500円玉', shout: '' },
+  };
+  const STRONG_KEY = 1.95;              // キーボードで「強く投げる」（Shift＋↑）時の強さ
+  const IDLE_TIP = 7;                   // 「すき」が通じなくなったあと、投げずにこの秒数待つと、ヒントが出る
+  /* 硬貨の色 */
+  const LOOK = { alumi: ['#e4e8ea', '#aeb6bb'], brass: ['#ecc95c', '#b98f25'], copper: ['#d48a4c', '#9a5a26'], silver: ['#d9dfe4', '#98a3ac'], gold: ['#f1dc8e', '#c2a340'] };
+
+  const K = KECHI, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const clamp = K.clamp, lerp = K.lerp, now = () => performance.now() / 1000;
+  const easeOut = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3), easeIO = t => { t = clamp(t, 0, 1); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const pick = a => a[(Math.random() * a.length) | 0];
+  const FONT_LOGO = '"Dela Gothic One","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif', FONT_BODY = '"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif', FONT_FUDE = '"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif';
+  const INK = '#2a1a12', PAPER = '#fff6e2', SHU = '#d8452b', GOLD = '#f2c14e';
+
+  /* ---------- 状態 ---------- */
+  const S = {
+    screen: 'boot',            // boot（準備中）| title | play | ending（3枚入った直後）| result
+    t: 0, g: null, sel: 0, aim: 0, keyAim: false, tips: {}, bq: null, freeze: false, wish: '', best: null, newBest: false, rank: null, fx: [], bubble: null, ptr: null, guide: true, threw: 0, endAt: 0, resultAt: 0, shake: 0,
+    face: { open: 1, mouth: 0.05, lx: 0, ly: 0, brow: 0, sx: 0, shock: 0, greedy: 0, smirk: 0, blink: 2, q: 0, bonk: 0, alert: false, helmet: 0 }, slap: [0, 0], fly: null, hintTimer: 0,
+    bellAt: -9, bellOff: -9, helmetAt: 0, burnSay: '', lastAct: 0, ms: 0,      // bellAt＝鈴が鳴った時刻　bellOff＝鈴を取り上げられた時刻　helmetAt＝かぶとをかぶる時刻　burnSay＝次に神様が言う「もう通じない」のせりふ
+  };
+
+  /* ---------- 舞台の大きさ ----------
+     横は360で固定。縦は画面に合わせて600〜800。奥行きのある絵は proj() で画面の場所に直す */
+  const app = $('app'), cv = $('cv'), cx = cv.getContext('2d');
+  let H = 640, SC = 1, KP = 1;
+  const PJ = { D: 3.2, EYE: 1.5, FX: 990, FY: 974, hz: 70 };
+  function fit() {
+    const b = document.body.getBoundingClientRect(), vw = Math.max(1, b.width), vh = Math.max(1, b.height);
+    const sc = Math.min(vw / 360, vh / 600), h = Math.round(Math.min(800, vh / sc));
+    if (sc !== SC || h !== H) { SC = sc; H = h; app.style.setProperty('--s', SC.toFixed(4)); app.style.setProperty('--h', H); app.style.left = (b.left + vw / 2) + 'px'; app.style.top = (b.top + vh / 2) + 'px'; }
+    PJ.hz = 74 + (H - 600) * 0.14; PJ.FY = (H - 114 - PJ.hz) * PJ.D / PJ.EYE;
+    const k = Math.min(3, SC * Math.min(window.devicePixelRatio || 1, 2.5), Math.sqrt(2.6e6 / (360 * H))), w = Math.round(360 * k), hh = Math.round(H * k);
+    if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; } KP = k;
+    $('turnNote').hidden = !(SC < 0.62 && S.screen === 'title');
+  }
+  const proj = (x, y, z) => { const k = 1 / (z + PJ.D); return { x: 180 + PJ.FX * x * k, y: PJ.hz + PJ.FY * (PJ.EYE - y) * k, s: PJ.FX * k }; };
+  const startPos = () => proj(K.START.x, K.START.y, K.START.z);
+
+  /* ---------- 絵の部品 ---------- */
+  function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+  function poly(c, pts) { c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath(); }
+  /* 硬貨：r＝半径、flip＝くるくる回る向き（0で正面）、val＝数字を書くか */
+  function drawCoin(c, x, y, r, def, flip, val) {
+    const col = LOOK[def.look], k = 0.16 + 0.84 * Math.abs(Math.cos(flip));
+    c.save(); c.translate(x, y); c.scale(1, k);
+    c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fillStyle = col[0]; c.fill(); c.lineWidth = Math.max(1.2, r * 0.11); c.strokeStyle = INK; c.stroke();
+    if (def.hole) {      // 穴あき硬貨（5円・50円）：穴は ど真ん中
+      c.beginPath(); c.arc(0, 0, r * 0.34, 0, TAU); c.lineWidth = Math.max(0.8, r * 0.07); c.strokeStyle = col[1]; c.stroke();
+      c.beginPath(); c.arc(0, 0, r * 0.18, 0, TAU); c.fillStyle = '#3a2416'; c.fill(); c.lineWidth = Math.max(0.8, r * 0.07); c.strokeStyle = INK; c.stroke();
+    } else { c.beginPath(); c.arc(0, 0, r * 0.78, 0, TAU); c.lineWidth = Math.max(0.8, r * 0.07); c.strokeStyle = col[1]; c.stroke(); }
+    if (def.look === 'gold') { c.beginPath(); c.arc(0, 0, r * 0.56, 0, TAU); c.fillStyle = '#f7ecb9'; c.fill(); }
+    if (val && r >= 11 && k > 0.55) { c.fillStyle = INK; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `400 ${Math.round(r * (def.hole ? 0.47 : def.v >= 100 ? 0.62 : 0.72))}px ${FONT_LOGO}`; c.fillText(String(def.v), 0, def.hole ? r * 0.61 : r * 0.06); }
+    c.restore();
+  }
+  /* 賽銭箱：box＝{x0,x1,z0,z1,top}、label＝正面の札の字 */
+  function boxBack(c, box) {      // 上の口（暗い中と、さんの棒）
+    const a = proj(box.x0, box.top, box.z1), b = proj(box.x1, box.top, box.z1), d = proj(box.x1, box.top, box.z0), e = proj(box.x0, box.top, box.z0);
+    poly(c, [a, b, d, e]); c.fillStyle = '#2b170c'; c.fill();
+    c.lineWidth = Math.max(2, e.s * 0.018); c.strokeStyle = '#8a5a2b'; c.lineCap = 'round';
+    for (let i = 1; i < 6; i++) { const z = lerp(box.z0, box.z1, i / 6), p = proj(box.x0, box.top, z), q = proj(box.x1, box.top, z); c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.stroke(); }
+    poly(c, [a, b, d, e]); c.lineWidth = 2.5; c.strokeStyle = INK; c.stroke();
+  }
+  function boxFront(c, box, label, size) {
+    const tl = proj(box.x0, box.top, box.z0), br = proj(box.x1, 0, box.z0), w = br.x - tl.x, h = br.y - tl.y;
+    const g = c.createLinearGradient(0, tl.y, 0, br.y); g.addColorStop(0, '#c98d4e'); g.addColorStop(1, '#9a6230'); c.fillStyle = g; c.fillRect(tl.x, tl.y, w, h);
+    c.strokeStyle = 'rgba(90,50,20,.45)'; c.lineWidth = 1.5; for (let i = 1; i < 4; i++) { c.beginPath(); c.moveTo(tl.x + 2, tl.y + h * i / 4); c.lineTo(tl.x + w - 2, tl.y + h * i / 4); c.stroke(); }
+    c.fillStyle = '#7a4a22'; c.fillRect(tl.x, tl.y, w, Math.max(4, h * 0.1)); c.fillRect(tl.x, br.y - Math.max(4, h * 0.09), w, Math.max(4, h * 0.09));
+    c.lineWidth = 2.5; c.strokeStyle = INK; c.strokeRect(tl.x, tl.y, w, h);
+    c.font = `400 ${size}px ${FONT_LOGO}`; const tw = c.measureText(label).width, pw = tw + size * 1.1, ph = size * 1.7, px = tl.x + (w - pw) / 2, py = tl.y + h * 0.52 - ph / 2;
+    rr(c, px, py, pw, ph, 4); c.fillStyle = PAPER; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
+    c.fillStyle = INK; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(label, tl.x + w / 2, py + ph / 2 + size * 0.04);
+  }
+
+  /* 神様の体：着物を着て、箱の向こうにすわっている。rest＝[左, 右] の腕を「ひざに手を置いた形」で描くかどうか（動かす腕は drawHand が描く） */
+  const ROBE = '#4b2f7d', ROBE_L = '#5d3f97', ROBE_D = '#38235f', SKIN = '#f4cea6', WHITE = '#fbf7ee';
+  const bodyK = () => clamp(PJ.FY / 952, 0.9, 1.35);      // 体のたての伸び（縦長の画面では、箱と同じ割合で体も長くする）
+  const shoulder = (gx, gy, u, sd, ky) => ({ x: gx + sd * u * 0.84, y: gy + u * 0.44 * ky, r: u * 0.27 });
+  const elbow = (gx, gy, u, sd, ky) => ({ x: gx + sd * u * 0.95, y: gy + u * 0.66 * ky, r: u * 0.25 });      // 動かす腕の そで口（ここから腕が出る）
+  /* 2つの丸をなめらかにつないだ形（そで）。丸0が大きくても小さくてもよい */
+  function capsule(c, x0, y0, r0, x1, y1, r1) {
+    const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy); c.beginPath();
+    if (d <= Math.abs(r0 - r1) + 0.01) { if (r0 >= r1) c.arc(x0, y0, r0, 0, TAU); else c.arc(x1, y1, r1, 0, TAU); return; }
+    const th = Math.atan2(dy, dx), a = Math.acos((r0 - r1) / d);
+    c.arc(x0, y0, r0, th + a, th - a); c.arc(x1, y1, r1, th - a, th + a); c.closePath();
+  }
+  function drawBody(c, gx, gy, u, rest, ky) {
+    const X = v => gx + v * u, Y = v => gy + v * u * ky, lw = Math.max(2.5, u * 0.02);
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    c.beginPath(); c.ellipse(gx, Y(1.22), u * 1.36, u * 0.1, 0, 0, TAU); c.fillStyle = 'rgba(30,14,6,.32)'; c.fill();      // 床に落ちる影
+    // ひざ（はかま）：あぐらをかいて、箱の左右にひざが出ている
+    c.beginPath(); c.moveTo(X(-0.7), Y(0.84)); c.quadraticCurveTo(X(-1.36), Y(0.8), X(-1.33), Y(1.08)); c.quadraticCurveTo(X(-1.3), Y(1.25), X(-0.9), Y(1.24)); c.lineTo(X(0.9), Y(1.24)); c.quadraticCurveTo(X(1.3), Y(1.25), X(1.33), Y(1.08)); c.quadraticCurveTo(X(1.36), Y(0.8), X(0.7), Y(0.84)); c.closePath();
+    c.fillStyle = ROBE_D; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    c.lineWidth = lw * 0.7; c.strokeStyle = 'rgba(20,10,30,.5)'; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(X(sd * 1.2), Y(0.98)); c.quadraticCurveTo(X(sd * 1.0), Y(1.06), X(sd * 0.78), Y(1.02)); c.stroke(); }
+    // 胴：なで肩から、すそへ広がる
+    c.beginPath(); c.moveTo(X(-0.4), Y(0.1)); c.quadraticCurveTo(X(-0.86), Y(0.12), X(-0.98), Y(0.42)); c.quadraticCurveTo(X(-1.02), Y(0.78), X(-0.9), Y(1.0)); c.lineTo(X(0.9), Y(1.0)); c.quadraticCurveTo(X(1.02), Y(0.78), X(0.98), Y(0.42)); c.quadraticCurveTo(X(0.86), Y(0.12), X(0.4), Y(0.1)); c.closePath();
+    c.fillStyle = ROBE; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    // えり：白いじゅばんと金のふちが、胸の前で重なる
+    const collar = (w, col) => { c.lineWidth = w; c.strokeStyle = col; c.beginPath(); c.moveTo(X(-0.66), Y(0.15)); c.lineTo(X(0.1), Y(1.0)); c.stroke(); c.beginPath(); c.moveTo(X(0.66), Y(0.15)); c.lineTo(X(-0.1), Y(1.0)); c.stroke(); };
+    c.save(); c.beginPath(); c.rect(X(-1.1), Y(0.1), u * 2.2, u * 0.9 * ky); c.clip(); c.lineCap = 'butt';
+    collar(u * 0.3 + lw * 2, INK); collar(u * 0.3, GOLD); collar(u * 0.16 + lw * 1.4, INK); collar(u * 0.16, WHITE); c.restore(); c.lineCap = 'round';
+    // 帯
+    c.fillStyle = SHU; c.fillRect(X(-0.93), Y(0.8), u * 1.86, u * 0.14 * ky); c.lineWidth = lw * 0.8; c.strokeStyle = INK; c.strokeRect(X(-0.93), Y(0.8), u * 1.86, u * 0.14 * ky);
+    // 休んでいる腕：そでが肩から下がり、手をひざに置く
+    for (const sd of [-1, 1]) {
+      const j = shoulder(gx, gy, u, sd, ky); c.fillStyle = ROBE_L; c.strokeStyle = INK; c.lineWidth = lw;
+      if (rest[sd < 0 ? 0 : 1]) {
+        capsule(c, j.x, j.y, j.r, X(sd * 1.02), Y(0.8), u * 0.25); c.fill(); c.stroke();
+        c.save(); c.translate(X(sd * 1.0), Y(1.0)); cuff(c, u * 0.3, lw); handShape(c, u * 0.3, -sd, false, true); c.restore();
+      } else {      // 動かす腕：そでをまくっている。そで口はこちら向きで、そこから腕が出る（腕は drawHand が描く）
+        const e = elbow(gx, gy, u, sd, ky); capsule(c, j.x, j.y, j.r, e.x, e.y, e.r); c.fill(); c.stroke();
+        c.beginPath(); c.ellipse(e.x, e.y + u * 0.02, e.r * 0.86, e.r * 0.8, 0, 0, TAU); c.fillStyle = GOLD; c.fill(); c.stroke();
+        c.beginPath(); c.ellipse(e.x, e.y + u * 0.03, e.r * 0.68, e.r * 0.62, 0, 0, TAU); c.fillStyle = WHITE; c.fill(); c.lineWidth = lw * 0.7; c.stroke();
+        c.beginPath(); c.ellipse(e.x, e.y + u * 0.04, e.r * 0.52, e.r * 0.46, 0, 0, TAU); c.fillStyle = '#25143b'; c.fill();
+      }
+    }
+  }
+  /* そで口（金のふち・白い裏地・暗い中）。原点＝手のひらのまん中 */
+  function cuff(c, s, lw) {
+    const y = -s * 0.36; c.lineWidth = lw || 2.2; c.strokeStyle = INK;
+    c.beginPath(); c.ellipse(0, y, s * 0.6, s * 0.29, 0, 0, TAU); c.fillStyle = GOLD; c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(0, y, s * 0.5, s * 0.21, 0, 0, TAU); c.fillStyle = WHITE; c.fill(); c.lineWidth = Math.max(1.4, (lw || 2.2) * 0.7); c.stroke();
+    c.beginPath(); c.ellipse(0, y + s * 0.02, s * 0.4, s * 0.14, 0, 0, TAU); c.fillStyle = '#25143b'; c.fill();
+  }
+  /* 手：原点＝手のひらのまん中、指は下向き（こちらへのばした手の甲）。th＝親指のある側（-1で左、1で右）、grip＝にぎっている、wr＝手首も描く。
+     pass＝1なら外側の線だけ、2なら中の色だけ（腕とつなげて1つの形に見せるため、2回に分けて描ける） */
+  function handShape(c, s, th, grip, wr, pass) {
+    const lw = s > 44 ? 2.2 : 1.9, segs = [];      // segs＝指（太い線で描く）：[x0, y0, x1, y1, 太さ]
+    if (grip) { for (let i = 0; i < 4; i++) { const bx = th * (0.33 - i * 0.22) * s; segs.push([bx, s * 0.2, bx, s * 0.3, s * (i === 3 ? 0.18 : 0.2)]); } }
+    else { const L = [0.38, 0.44, 0.4, 0.3], W = [0.2, 0.2, 0.19, 0.17], A = [0.16, 0.05, -0.06, -0.19];
+      for (let i = 0; i < 4; i++) { const bx = th * (0.33 - i * 0.22) * s, a = A[i] * th; segs.push([bx, s * 0.14, bx + Math.sin(a) * L[i] * s, s * 0.14 + Math.cos(a) * L[i] * s, W[i] * s]); }
+      segs.push([th * s * 0.34, -s * 0.06, th * s * 0.63, s * 0.2, s * 0.21]); }      // 親指
+    const palm = () => rr(c, -s * 0.45, -s * 0.3, s * 0.9, grip ? s * 0.62 : s * 0.58, s * 0.2), wrist = () => rr(c, -s * 0.24, -s * 0.46, s * 0.48, s * 0.3, s * 0.14);
+    const seg = (g, w) => { c.beginPath(); c.moveTo(g[0], g[1]); c.lineTo(g[2], g[3]); c.lineWidth = w; c.stroke(); };
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    if (pass !== 2) { c.strokeStyle = INK; for (const g of segs) seg(g, g[4] + lw * 2); c.lineWidth = lw * 2; palm(); c.stroke(); if (wr) { wrist(); c.stroke(); } }      // まず外側の線
+    if (pass === 1) return;
+    c.strokeStyle = SKIN; c.fillStyle = SKIN; for (const g of segs) seg(g, g[4]); palm(); c.fill(); if (wr) { wrist(); c.fill(); }      // 肌の色でうめる
+    c.strokeStyle = 'rgba(170,100,60,.75)'; c.lineWidth = Math.max(1.2, s * 0.03);
+    if (grip) {      // にぎった指のすじと、その上に重なる親指
+      for (let i = 0; i < 3; i++) { const x = th * (0.22 - i * 0.22) * s; c.beginPath(); c.moveTo(x, s * 0.16); c.lineTo(x, s * 0.36); c.stroke(); }
+      const t = [th * s * 0.27, s * 0.03, th * s * 0.03, s * 0.19, s * 0.19]; c.strokeStyle = INK; seg(t, t[4] + lw * 2); c.strokeStyle = SKIN; seg(t, t[4]);
+    } else { for (let i = 0; i < 4; i++) { const x = th * (0.33 - i * 0.22) * s; c.beginPath(); c.arc(x, s * 0.11, s * 0.06, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); } }      // 指のつけ根のふくらみ
+  }
+  /* 神様：(gx,gy)＝顔のまん中、u＝大きさ、f＝表情、lv＝本気度、rest＝休ませておく腕（drawBody を見てください）、ky＝体のたての伸び */
+  function drawGod(c, gx, gy, u, f, lv, rest, ky) {
+    const R = u * 0.45, hx = gx + f.sx * u * 0.06, hy = gy - f.bonk * u * 0.03;
+    // 後光と体
+    const hl = c.createRadialGradient(gx, gy, R * 0.6, gx, gy, R * 2.3); hl.addColorStop(0, 'rgba(255,214,120,.42)'); hl.addColorStop(1, 'rgba(255,214,120,0)'); c.fillStyle = hl; c.beginPath(); c.arc(gx, gy, R * 2.3, 0, TAU); c.fill();
+    drawBody(c, gx, gy, u, rest || [true, true], ky || 1);
+    // 冠（古いお金の形）
+    c.beginPath(); c.ellipse(hx, hy - R * 0.93, R * 0.5, R * 0.2, 0, 0, TAU); c.fillStyle = '#1d1420'; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.arc(hx, hy - R * 1.2, R * 0.24, 0, TAU); c.fillStyle = GOLD; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke(); c.fillStyle = '#7a4a22'; c.fillRect(hx - R * 0.07, hy - R * 1.27, R * 0.14, R * 0.14);
+    // 顔
+    const red = lv >= 3 ? 0.25 : lv >= 2 ? 0.16 : lv >= 1 ? 0.07 : 0;
+    c.beginPath(); c.arc(hx, hy, R, 0, TAU); c.fillStyle = `rgb(${244 - red * 20},${206 - red * 150},${166 - red * 160})`; c.fill(); c.lineWidth = 2.5; c.strokeStyle = INK; c.stroke();
+    // ひげ（顔の下半分をおおう、白くてふわふわ）
+    c.beginPath(); c.moveTo(hx - R * 0.98, hy + R * 0.05);
+    c.quadraticCurveTo(hx - R * 1.12, hy + R * 0.95, hx - R * 0.45, hy + R * 1.18); c.quadraticCurveTo(hx, hy + R * 1.5, hx + R * 0.45, hy + R * 1.18); c.quadraticCurveTo(hx + R * 1.12, hy + R * 0.95, hx + R * 0.98, hy + R * 0.05);
+    c.quadraticCurveTo(hx + R * 0.5, hy + R * 0.42, hx, hy + R * 0.2); c.quadraticCurveTo(hx - R * 0.5, hy + R * 0.42, hx - R * 0.98, hy + R * 0.05); c.closePath(); c.fillStyle = '#fbf7ee'; c.fill(); c.lineWidth = 2.2; c.strokeStyle = INK; c.stroke();
+    // ほっぺ
+    c.fillStyle = 'rgba(232,110,90,.38)'; for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(hx + sd * R * 0.62, hy + R * 0.08, R * 0.16, R * 0.1, 0, 0, TAU); c.fill(); }
+    // 目
+    const wide = f.shock > 0 ? 1.18 : f.alert ? 1.09 : 1, ex = R * 0.36, ey = hy - R * 0.2, erx = R * 0.22 * wide, ery = R * 0.2 * wide;
+    for (const sd of [-1, 1]) {
+      const x = hx + sd * ex, open = clamp(f.open, 0, 1.05);
+      if (open < 0.14) { c.beginPath(); c.arc(x, ey - ery * 0.1, erx * 0.9, 0.15 * Math.PI, 0.85 * Math.PI); c.lineWidth = 2.6; c.strokeStyle = INK; c.lineCap = 'round'; c.stroke(); continue; }      // とじた目
+      c.save(); c.beginPath(); c.ellipse(x, ey, erx, ery * open, 0, 0, TAU); c.fillStyle = '#fff'; c.fill(); c.lineWidth = 2.2; c.strokeStyle = INK; c.stroke(); c.clip();
+      if (f.alert && open > 0.6) { c.strokeStyle = 'rgba(216,69,43,.85)'; c.lineWidth = Math.max(1, R * 0.022); c.lineCap = 'round'; for (const v of [[-1, -0.35, -0.42, -0.12], [-1, 0.5, -0.5, 0.26], [1, -0.45, 0.48, -0.18], [1, 0.35, 0.44, 0.2]]) { c.beginPath(); c.moveTo(x + v[0] * erx, ey + v[1] * ery); c.lineTo(x + v[2] * erx, ey + v[3] * ery); c.stroke(); } }      // 血走った目
+      const px = x + f.lx * erx * 0.5, py = ey + f.ly * ery * 0.45;
+      if (f.greedy > 0) { c.fillStyle = '#e0a520'; c.font = `400 ${Math.round(ery * 1.7)}px ${FONT_LOGO}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('¥', px, py + ery * 0.08); }
+      else { c.beginPath(); c.arc(px, py, erx * (f.shock > 0 ? 0.3 : 0.48), 0, TAU); c.fillStyle = INK; c.fill(); c.beginPath(); c.arc(px - erx * 0.14, py - ery * 0.18, erx * 0.14, 0, TAU); c.fillStyle = '#fff'; c.fill(); }
+      c.restore();
+    }
+    // まゆ（本気になるほど つり上がる）
+    c.lineCap = 'round';
+    for (const sd of [-1, 1]) { const bx = hx + sd * ex, by = ey - ery - R * 0.16 - (f.shock > 0 || f.smirk > 0 ? R * 0.08 : 0), dy = Math.sin(f.brow) * R * 0.2;      // 内側が下がり、外側が上がる
+      c.beginPath(); c.moveTo(bx - sd * R * 0.2, by + dy); c.lineTo(bx + sd * R * 0.2, by - dy); c.lineWidth = R * 0.13 + 3.5; c.strokeStyle = INK; c.stroke(); c.lineWidth = R * 0.13; c.strokeStyle = '#fbf7ee'; c.stroke(); }
+    // 鼻と口
+    c.beginPath(); c.ellipse(hx, hy + R * 0.1, R * 0.11, R * 0.09, 0, 0, TAU); c.fillStyle = '#e9a987'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = INK; c.stroke();
+    const m = clamp(f.mouth, 0, 1), my = hy + R * 0.52;
+    if (f.smirk > 0) { c.beginPath(); c.moveTo(hx - R * 0.2, my); c.quadraticCurveTo(hx + R * 0.05, my + R * 0.16, hx + R * 0.26, my - R * 0.1); c.lineWidth = 2.6; c.strokeStyle = INK; c.stroke(); }
+    else if (f.greedy > 0) { c.beginPath(); c.arc(hx, my - R * 0.08, R * 0.24, 0.1 * Math.PI, 0.9 * Math.PI); c.lineWidth = 2.6; c.strokeStyle = INK; c.stroke(); }
+    else { c.beginPath(); c.ellipse(hx, my, R * (0.13 + 0.1 * m), R * (0.035 + 0.3 * m), 0, 0, TAU); c.fillStyle = '#7a2b1e'; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke();
+      if (m > 0.5) { c.beginPath(); c.ellipse(hx, my + R * 0.14 * m, R * 0.1, R * 0.09 * m, 0, 0, TAU); c.fillStyle = '#e8705a'; c.fill(); } }
+    if (f.helmet > 0) drawHelmet(c, hx, hy, R, f.helmet);
+    // 怒りのしるし・あくびの涙・「？」
+    if (lv >= 2) { const ax = hx + R * 0.74, ay = hy - R * 0.72, q = R * 0.12; c.lineWidth = 2.6; c.strokeStyle = SHU; c.lineCap = 'round'; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { c.beginPath(); c.moveTo(ax + sx * q * 0.35, ay + sy * q * 1.3); c.quadraticCurveTo(ax + sx * q * 0.35, ay + sy * q * 0.35, ax + sx * q * 1.3, ay + sy * q * 0.35); c.stroke(); } }
+    if (f.open < 0.14 && m > 0.6) { c.beginPath(); c.arc(hx - ex - erx * 1.1, ey + ery * 0.5, R * 0.06, 0, TAU); c.fillStyle = '#9ad4f5'; c.fill(); }
+    if (f.q > 0) { c.font = `400 ${Math.round(R * 0.5)}px ${FONT_LOGO}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 4; c.strokeStyle = INK; c.strokeText('?', hx + R * 0.95, hy - R * 0.95); c.fillStyle = GOLD; c.fillText('?', hx + R * 0.95, hy - R * 0.95); }
+  }
+  /* かぶと：おでこに硬貨を当てられた神様がかぶる。k＝かぶり具合（0→1で、上からすぽっとはまる） */
+  function drawHelmet(c, hx, hy, R, k) {
+    const dy = -(1 - easeOut(k)) * R * 0.9, lw = Math.max(2.2, R * 0.045);
+    c.save(); c.translate(hx, hy + dy); c.lineJoin = 'round'; c.lineCap = 'round';
+    for (const sd of [-1, 1]) {      // 金のくわがた
+      c.beginPath(); c.moveTo(sd * R * 0.1, -R * 0.86); c.quadraticCurveTo(sd * R * 0.62, -R * 0.98, sd * R * 0.7, -R * 1.52); c.quadraticCurveTo(sd * R * 0.4, -R * 1.12, sd * R * 0.04, -R * 1.02); c.closePath(); c.fillStyle = GOLD; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    }
+    const brim = () => { c.beginPath(); c.arc(0, 0, R * 1.07, Math.PI * 1.165, Math.PI * 1.835); c.quadraticCurveTo(0, -R * 0.93, Math.cos(Math.PI * 1.165) * R * 1.07, Math.sin(Math.PI * 1.165) * R * 1.07); c.closePath(); };
+    brim(); const g = c.createLinearGradient(0, -R * 1.1, 0, -R * 0.5); g.addColorStop(0, '#5d6b80'); g.addColorStop(1, '#2f3846'); c.fillStyle = g; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    c.save(); brim(); c.clip(); c.beginPath(); c.moveTo(-R * 0.96, -R * 0.52); c.quadraticCurveTo(0, -R * 0.93, R * 0.96, -R * 0.52); c.lineWidth = R * 0.16; c.strokeStyle = '#8f9db3'; c.stroke();      // ふちの帯
+    c.strokeStyle = 'rgba(20,24,32,.5)'; c.lineWidth = lw * 0.6; for (const x of [-0.42, 0, 0.42]) { c.beginPath(); c.moveTo(x * R, -R * 1.07); c.lineTo(x * R * 1.25, -R * 0.6); c.stroke(); } c.restore();
+    brim(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.arc(0, -R * 0.98, R * 0.17, 0, TAU); c.fillStyle = GOLD; c.fill(); c.lineWidth = lw * 0.8; c.stroke(); c.fillStyle = '#7a4a22'; c.fillRect(-R * 0.05, -R * 1.03, R * 0.1, R * 0.1);      // 前立ての古銭
+    c.restore();
+  }
+  /* 鈴：(x,y)＝鈴のまん中、r＝大きさ、top＝ひもの付け根の高さ、sw＝ゆれ（ラジアン）、gone＝取り上げられた（ひもだけ残る） */
+  function drawBell(c, x, y, r, top, sw, gone) {
+    c.save(); c.translate(x, top); c.rotate(sw); const L = y - top; c.lineCap = 'round'; c.lineJoin = 'round';
+    const cord = len => { c.beginPath(); c.moveTo(0, 0); c.lineTo(0, len); c.lineWidth = 6; c.strokeStyle = INK; c.stroke(); c.lineWidth = 3.4; c.strokeStyle = '#fff6e2'; c.stroke(); c.setLineDash([4, 5]); c.strokeStyle = SHU; c.stroke(); c.setLineDash([]); };      // 紅白のひも
+    if (gone) { cord(Math.min(L - r, 22)); c.restore(); return; }
+    cord(L - r * 0.9);
+    c.beginPath(); c.arc(0, L - r * 1.02, r * 0.26, 0, TAU); c.fillStyle = SHU; c.fill(); c.lineWidth = 2; c.strokeStyle = INK; c.stroke();      // 結び目
+    const g = c.createRadialGradient(-r * 0.35, L - r * 0.4, r * 0.1, 0, L, r * 1.05); g.addColorStop(0, '#ffe9a6'); g.addColorStop(0.55, GOLD); g.addColorStop(1, '#c08a22');
+    c.beginPath(); c.arc(0, L, r, 0, TAU); c.fillStyle = g; c.fill(); c.lineWidth = 2.5; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.ellipse(0, L + r * 0.02, r * 0.98, r * 0.2, 0, 0, Math.PI); c.lineWidth = 2; c.stroke();      // まん中の帯
+    c.beginPath(); c.moveTo(-r * 0.42, L + r * 0.62); c.lineTo(r * 0.42, L + r * 0.62); c.lineWidth = Math.max(2.4, r * 0.16); c.strokeStyle = INK; c.stroke();      // 下の切れこみ
+    for (const sd of [-1, 1]) { c.beginPath(); c.arc(sd * r * 0.42, L + r * 0.62, r * 0.13, 0, TAU); c.fillStyle = INK; c.fill(); }
+    c.restore();
+  }
+  /* 手口のハンコ（絵馬の左下に3つ） */
+  function drawStamps(c, x, y, w, via) {
+    via.forEach((k, i) => { const v = VIA[k]; if (!v) return; const r = w * 0.047;
+      c.save(); c.translate(x + i * w * 0.105, y); c.rotate([-0.14, 0.08, -0.06][i % 3]);
+      c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fillStyle = '#c22f1c'; c.fill(); c.beginPath(); c.arc(0, 0, r * 0.82, 0, TAU); c.lineWidth = w * 0.004; c.strokeStyle = '#fff6e2'; c.stroke();
+      const fs = fitFont(c, v.stamp, r * 1.36, r * 1.0, FONT_LOGO, 400); c.font = `400 ${fs}px ${FONT_LOGO}`; c.fillStyle = '#fff6e2'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(v.stamp, 0, fs * 0.05); c.restore(); });
+  }
+  /* 神様の腕と手：(x,y)＝手のひらのまん中、s＝大きさ、rot＝かたむき、from＝そで口（elbow の返り値）、th＝親指のある側 */
+  function drawHand(c, x, y, s, rot, from, grip, th) {
+    const tilt = rot - 0.3 * clamp((x - from.x) / (from.r * 6.4), -1, 1);      // 腕がのびている向きへ、手も少しかたむく
+    const wx = x + Math.sin(tilt) * s * 0.3, wy = y - Math.cos(tilt) * s * 0.3, r0 = Math.min(from.r * 0.5, s * 0.36), r1 = s * 0.26;      // (wx,wy)＝手首
+    const arm = () => capsule(c, from.x, from.y + from.r * 0.16, r0, wx, wy, r1), hand = pass => { c.save(); c.translate(x, y); c.rotate(tilt); handShape(c, s, th, grip, false, pass); c.restore(); };
+    c.lineJoin = 'round'; arm(); c.lineWidth = 4.4; c.strokeStyle = INK; c.stroke(); hand(1);      // 腕と手の外側の線を先に描き、
+    arm(); c.fillStyle = SKIN; c.fill(); hand(2);      // あとから中をうめる（腕と手が1つにつながって見える）
+  }
+  /* 絵馬：願い事と金額を書いた木の札。w＝横幅。data＝{wish, spent, rank, best} */
+  function fitFont(c, text, maxW, size, font, weight) { let s = size; for (;;) { c.font = `${weight} ${s}px ${font}`; if (c.measureText(text).width <= maxW || s <= size * 0.42) return s; s -= Math.max(1, size * 0.04); } }
+  function drawEma(c, x, y, w, data) {
+    const h = w * 0.8, t = y - h / 2, pts = [{ x, y: t }, { x: x + w / 2, y: t + h * 0.26 }, { x: x + w / 2, y: t + h }, { x: x - w / 2, y: t + h }, { x: x - w / 2, y: t + h * 0.26 }];
+    c.save(); c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(x - w * 0.04, t + h * 0.1); c.quadraticCurveTo(x - w * 0.1, t - h * 0.2, x, t - h * 0.26); c.quadraticCurveTo(x + w * 0.1, t - h * 0.2, x + w * 0.04, t + h * 0.1); c.lineWidth = w * 0.022; c.strokeStyle = '#c22f1c'; c.stroke();      // 赤いひも
+    poly(c, pts); c.fillStyle = 'rgba(0,0,0,.3)'; c.save(); c.translate(0, w * 0.025); c.fill(); c.restore();
+    const g = c.createLinearGradient(0, t, 0, t + h); g.addColorStop(0, '#f3d7a2'); g.addColorStop(1, '#e2b976'); poly(c, pts); c.fillStyle = g; c.fill();
+    c.save(); poly(c, pts); c.clip(); c.strokeStyle = 'rgba(160,110,50,.22)'; c.lineWidth = w * 0.006; for (let i = 0; i < 9; i++) { const yy = t + h * (0.12 + i * 0.105); c.beginPath(); c.moveTo(x - w / 2, yy); c.bezierCurveTo(x - w * 0.2, yy + h * 0.03, x + w * 0.2, yy - h * 0.03, x + w / 2, yy + h * 0.01); c.stroke(); } c.restore();
+    poly(c, pts); c.lineWidth = w * 0.02; c.strokeStyle = '#7a4a22'; c.stroke(); c.lineWidth = w * 0.007; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.arc(x, t + h * 0.1, w * 0.018, 0, TAU); c.fillStyle = '#5a341a'; c.fill();
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = INK;
+    const wish = (data.wish || '').trim(), l1 = wish ? `「${wish}」` : '願い事';
+    const s1 = fitFont(c, l1, w * 0.86, w * 0.105, FONT_FUDE, 800); c.font = `800 ${s1}px ${FONT_FUDE}`; c.fillText(l1, x, t + h * 0.335);
+    c.font = `800 ${w * 0.062}px ${FONT_FUDE}`; c.fillText('が', x, t + h * 0.46);
+    const amt = String(data.spent), sa = fitFont(c, amt + '円', w * 0.8, w * 0.23, FONT_LOGO, 400), wa = (c.font = `400 ${sa}px ${FONT_LOGO}`, c.measureText(amt).width), wy = (c.font = `400 ${sa * 0.5}px ${FONT_LOGO}`, c.measureText('円').width), ax = x - (wa + wy) / 2;
+    c.textAlign = 'left'; c.fillStyle = '#b3280f'; c.font = `400 ${sa}px ${FONT_LOGO}`; c.fillText(amt, ax, t + h * 0.635); c.font = `400 ${sa * 0.5}px ${FONT_LOGO}`; c.fillText('円', ax + wa + w * 0.008, t + h * 0.665);
+    c.textAlign = 'center'; c.fillStyle = INK; c.font = `800 ${w * 0.075}px ${FONT_FUDE}`; c.fillText('で叶った', x, t + h * 0.83);
+    if (data.rank) {      // 称号のはんこ
+      c.save(); c.translate(x + w * 0.24, t + h * 0.93); c.rotate(-0.07); const rs = fitFont(c, data.rank, w * 0.42, w * 0.058, FONT_LOGO, 400), rw = c.measureText(data.rank).width + w * 0.07, rh = rs * 1.75;
+      rr(c, -rw / 2, -rh / 2, rw, rh, rh * 0.22); c.fillStyle = '#c22f1c'; c.fill(); c.lineWidth = w * 0.006; c.strokeStyle = '#fff6e2'; rr(c, -rw / 2 + w * 0.008, -rh / 2 + w * 0.008, rw - w * 0.016, rh - w * 0.016, rh * 0.18); c.stroke();
+      c.fillStyle = '#fff6e2'; c.font = `400 ${rs}px ${FONT_LOGO}`; c.fillText(data.rank, 0, rs * 0.04); c.restore();
+    }
+    if (data.via && data.via.length) drawStamps(c, x - w * 0.395, t + h * 0.925, w, data.via);
+    if (data.best) { c.save(); c.translate(x - w * 0.37, t + h * 0.09); c.rotate(-0.2); c.beginPath(); for (let i = 0; i < 20; i++) { const a = i * Math.PI / 10, q = i % 2 ? w * 0.085 : w * 0.11; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); c.fillStyle = GOLD; c.fill(); c.lineWidth = w * 0.007; c.strokeStyle = INK; c.stroke(); c.fillStyle = INK; c.font = `400 ${w * 0.05}px ${FONT_LOGO}`; c.fillText('新記録', 0, w * 0.004); c.restore(); }
+    c.restore();
+  }
+
+  /* ============================================================
+     神社の絵を1枚描く
+     ============================================================ */
+  const line = (c, x0, y0, x1, y1) => { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); };
+  function drawBg(c) {
+    const fy = proj(0, 0, 4.75).y;
+    let g = c.createLinearGradient(0, 0, 0, fy); g.addColorStop(0, '#170a07'); g.addColorStop(1, '#40200f'); c.fillStyle = g; c.fillRect(0, 0, 360, fy + 1);
+    c.strokeStyle = 'rgba(242,193,78,.12)'; c.lineWidth = 1.5; for (let x = 20; x < 360; x += 32) line(c, x, 0, x, fy); for (let y = fy - 6; y > 40; y -= 30) line(c, 0, y, 360, y);      // 奥の戸の格子
+    g = c.createLinearGradient(0, fy, 0, H); g.addColorStop(0, '#a47345'); g.addColorStop(1, '#dcb47c'); c.fillStyle = g; c.fillRect(0, fy, 360, H - fy);      // 床
+    c.strokeStyle = 'rgba(90,50,20,.26)'; c.lineWidth = 1.5; for (let i = -7; i <= 7; i++) { const a = proj(i * 0.42, 0, 4.75), b = proj(i * 0.42, 0, -1.2); line(c, a.x, a.y, b.x, b.y); }
+    c.strokeStyle = INK; c.lineWidth = 2.5; line(c, 0, fy, 360, fy);
+    for (const sd of [-1, 1]) {      // 朱色の柱
+      const p = proj(sd * 1.22, 0, 4.4), w = 24, x = p.x - w / 2; c.fillStyle = SHU; c.fillRect(x, 0, w, p.y); c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(sd < 0 ? x + w - 7 : x, 0, 7, p.y);
+      c.lineWidth = 2.5; c.strokeStyle = INK; c.strokeRect(x, -4, w, p.y + 4); c.fillStyle = GOLD; c.fillRect(x - 3, p.y - 9, w + 6, 9); c.strokeRect(x - 3, p.y - 9, w + 6, 9);
+    }
+    c.fillStyle = '#4b2f7d'; c.beginPath(); c.moveTo(0, 0); c.lineTo(360, 0); c.lineTo(360, 44); for (let x = 360; x > 0; x -= 45) c.quadraticCurveTo(x - 22.5, 62, x - 45, 44); c.closePath(); c.fill(); c.lineWidth = 2.5; c.strokeStyle = INK; c.stroke();      // 幕
+    for (let x = 22.5; x < 360; x += 45) { c.beginPath(); c.arc(x, 49, 3, 0, TAU); c.fillStyle = GOLD; c.fill(); }
+    c.lineCap = 'round'; c.beginPath(); c.moveTo(14, 60); c.quadraticCurveTo(180, 82, 346, 60); c.lineWidth = 10; c.strokeStyle = INK; c.stroke(); c.lineWidth = 6.5; c.strokeStyle = '#e6cf93'; c.stroke();      // しめ縄
+    for (const x of [96, 180, 264]) { const y = 60 + 11 * (1 - Math.pow((x - 180) / 166, 2)) + 4; c.beginPath(); c.moveTo(x - 4, y); c.lineTo(x + 4, y); c.lineTo(x + 4, y + 7); c.lineTo(x + 9, y + 7); c.lineTo(x + 9, y + 15); c.lineTo(x + 1, y + 15); c.lineTo(x + 1, y + 22); c.lineTo(x - 6, y + 22); c.lineTo(x - 6, y + 13); c.lineTo(x - 1, y + 13); c.lineTo(x - 1, y + 7); c.lineTo(x - 4, y + 7); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke(); }
+  }
+  const godAt = () => { const p = proj(0, 1.02, 4.45); return { x: p.x, y: p.y, u: p.s }; };
+  const bellAt = () => { const p = proj(K.BELL.x, K.BELL.y, K.BELL.z); return { x: p.x, y: p.y, r: p.s * 0.13 }; };
+  /* 強くはじいた時は、画面で見たとおりの向きに飛ぶようにする（鈴をねらって はじけば、鈴に向かう）。画面の向き → しくみの中の向き */
+  const strongAngle = a => Math.atan(Math.tan(a) * (startPos().y - bellAt().y) * (K.BELL.z + PJ.D) / (PJ.FX * K.BELL.z * K.AIM));
+  function drawBellProp(c) {
+    const g = S.g, b = bellAt(), gone = !!g && g.bell === 'gone', dt = S.t - S.bellAt, sw = dt >= 0 && dt < 2.4 ? 0.5 * Math.sin(dt * 13) * Math.exp(-dt * 1.9) : 0.03 * Math.sin(S.t * 1.3);
+    if (gone && S.t - S.bellOff < 0.45) { const k = (S.t - S.bellOff) / 0.45, gp = godAt(); c.save(); c.globalAlpha = 1 - k; drawBell(c, lerp(b.x, gp.x - gp.u * 0.5, easeOut(k)), lerp(b.y, gp.y + gp.u * 0.5, k * k), b.r * (1 - 0.3 * k), 30, 0, false); c.restore(); }      // 神様が ひったくる
+    drawBell(c, b.x, b.y, b.r, 30, sw, gone);
+  }
+  function handPose(h, i) {      // 神様の手の、いまの場所と向き
+    const g = S.g, sd = i ? 1 : -1; let x = h.x, y = 0.66, z = K.Z_GUARD, rot = 0, grip = false;
+    if (h.state === 'chase') y = h.wait > 0 ? 0.76 : 0.84;
+    else if (h.state === 'recover') { const k = clamp(h.t / 0.2, 0, 1); y = lerp(0.98, 0.68, k); rot = lerp(-0.8, 0, k) * sd; }
+    else if (h.state === 'grab' && h.coin) { const c = h.coin, k = easeIO(h.t / Math.max(0.01, h.wait)); x = lerp(h.x, c.x, k); y = lerp(0.8, c.y, k); z = lerp(K.Z_GUARD, c.z, k); grip = k > 0.85; }
+    else if (h.state === 'carry' && h.coin) { x = h.coin.x; y = h.coin.y + 0.03; z = h.coin.z; grip = true; }
+    else if (g.att.mode === 'away' && S.screen === 'play') { y = 0.56; rot = 0.4 * sd; }
+    if (S.screen === 'title') { y = 0.56; rot = 0.4 * sd; }
+    const slap = S.t - S.slap[i]; if (slap >= 0 && slap < 0.16) { y += 0.2 * Math.sin(slap / 0.16 * Math.PI); }
+    return { x, y, z, rot, grip, sd };
+  }
+  function drawHands(c, nearPass) {
+    const g = S.g, gp = godAt(), ky = bodyK();
+    g.hands.forEach((h, i) => { const q = handPose(h, i); if ((q.z < 2) !== nearPass) return; const p = proj(q.x, q.y, q.z); drawHand(c, p.x, p.y, p.s * 0.34, q.rot, elbow(gp.x, gp.y, gp.u, q.sd, ky), q.grip, -q.sd); });
+  }
+  const sink = c => c._t == null ? 1 : 1 - clamp((S.t - c._t) / 0.14, 0, 1);      // 箱に入った硬貨が、すっと消えていく
+  function drawCoins(c, zMin, zMax) {
+    const g = S.g; if (!g) return;
+    for (const k of g.coins) {
+      if (k.z < zMin || k.z >= zMax) continue; const def = K.COINS[k.ci];
+      if (k.state === 'ground') { const p = proj(k.x, 0.01, k.z); drawCoin(c, p.x, p.y, def.r * p.s, def, 1.25, false); continue; }
+      if (k.state === 'in' || k.state === 'near' || k.state === 'over') { const a = sink(k); if (a <= 0) continue; const p = proj(k.x, k.y - (1 - a) * 0.12, k.z); c.globalAlpha = a; drawCoin(c, p.x, p.y, def.r * p.s * (0.6 + 0.4 * a), def, 1.1, false); c.globalAlpha = 1; continue; }
+      const p = proj(k.x, k.y, k.z), flip = k.state === 'held' || k.state === 'wait' ? 0.3 : k.spin + (k.state === 'swat' ? 26 : 15) * k.t;
+      if (k.state !== 'held') { const sh = proj(k.x, 0, k.z), over = (k.z > K.NEAR.z0 && k.z < K.NEAR.z1 && Math.abs(k.x) < K.NEAR.x1) || (k.z > K.FAR.z0 && k.z < K.FAR.z1 && Math.abs(k.x) < K.FAR.x1); if (!over) { c.beginPath(); c.ellipse(sh.x, sh.y, def.r * sh.s * 0.9, def.r * sh.s * 0.32, 0, 0, TAU); c.fillStyle = 'rgba(40,20,8,.28)'; c.fill(); } }
+      drawCoin(c, p.x, p.y, def.r * p.s, def, flip, true);
+    }
+  }
+  function drawFx(c) {
+    const t = S.t; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+    S.fx = S.fx.filter(f => t - f.t0 < f.dur);
+    for (const f of S.fx) {
+      const u = (t - f.t0) / f.dur;
+      if (f.k === 'txt') { c.globalAlpha = u < 0.75 ? 1 : 1 - (u - 0.75) / 0.25; c.font = `400 ${f.size}px ${FONT_LOGO}`; const y = f.y - 26 * easeOut(u); c.lineWidth = 4; c.strokeStyle = INK; c.strokeText(f.text, f.x, y); c.fillStyle = f.col; c.fillText(f.text, f.x, y); c.globalAlpha = 1; }
+      else if (f.k === 'burst') { c.save(); c.translate(f.x, f.y); c.globalAlpha = 1 - u; c.strokeStyle = f.col; c.lineWidth = 3; c.lineCap = 'round'; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + 0.3, r0 = 8 + 16 * easeOut(u), r1 = r0 + 9; line(c, Math.cos(a) * r0, Math.sin(a) * r0, Math.cos(a) * r1, Math.sin(a) * r1); } c.restore(); }
+      else if (f.k === 'spark') { c.save(); c.translate(f.x, f.y); c.globalAlpha = 1 - u; c.fillStyle = GOLD; for (let i = 0; i < 7; i++) { const a = i * 0.9 + f.t0, r = 10 + 30 * easeOut(u), s = 4 * (1 - u) + 1.5; c.beginPath(); c.moveTo(Math.cos(a) * r, Math.sin(a) * r - s * 2); c.lineTo(Math.cos(a) * r + s, Math.sin(a) * r); c.lineTo(Math.cos(a) * r, Math.sin(a) * r + s * 2); c.lineTo(Math.cos(a) * r - s, Math.sin(a) * r); c.closePath(); c.fill(); } c.restore(); }
+      else if (f.k === 'bfly') { const x = f.side > 0 ? lerp(380, 250, easeOut(u)) + Math.sin(t * 5) * 8 : lerp(-20, 110, easeOut(u)) + Math.sin(t * 5) * 8, y = 96 + Math.sin(t * 7 + 1) * 10 + (u > 0.8 ? -(u - 0.8) * 300 : 0), w = Math.abs(Math.sin(t * 22)) * 10 + 3; c.fillStyle = '#ffe36a'; c.strokeStyle = INK; c.lineWidth = 1.8; for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(x + sd * w * 0.6, y, w * 0.6, 9, sd * 0.4, 0, TAU); c.fill(); c.stroke(); } c.fillStyle = INK; c.fillRect(x - 1.5, y - 7, 3, 14); }
+      else if (f.k === 'ring') { c.save(); c.globalAlpha = 1 - u; c.strokeStyle = GOLD; c.lineWidth = 3; c.lineCap = 'round'; for (const sd of [-1, 1]) for (let i = 0; i < 2; i++) { const rr2 = 26 + i * 11 + 16 * easeOut(u); c.beginPath(); c.arc(f.x, f.y, rr2, sd > 0 ? -0.55 : Math.PI - 0.55, sd > 0 ? 0.55 : Math.PI + 0.55); c.stroke(); } c.restore(); }
+      else if (f.k === 'zzz') { c.globalAlpha = Math.sin(u * Math.PI); c.font = `400 ${14 + u * 10}px ${FONT_LOGO}`; c.lineWidth = 3.5; c.strokeStyle = INK; const x = f.x + u * 24, y = f.y - u * 34; c.strokeText('z', x, y); c.fillStyle = PAPER; c.fillText('z', x, y); c.globalAlpha = 1; }
+    }
+  }
+  function drawBubble(c) {
+    if (S.bq && (!S.bubble || S.t - S.bubble.t0 >= 0.75)) { const q = S.bq; S.bq = null; S.bubble = { text: q.text, t0: S.t, dur: q.dur || 1.3 }; }
+    const b = S.bubble; if (!b) return; const u = (S.t - b.t0) / b.dur; if (u >= 1) { S.bubble = null; return; }
+    const gp = godAt(), R = gp.u * 0.45; c.font = `800 13px ${FONT_BODY}`; const tw = c.measureText(b.text).width, w = tw + 20, h = 28;
+    let x = gp.x + R * 0.72, y = gp.y - R * 1.02 - h; if (x + w > 352) x = 352 - w; if (y < 50) y = 50;
+    const k = u < 0.12 ? easeOut(u / 0.12) : u > 0.88 ? 1 - (u - 0.88) / 0.12 : 1; c.save(); c.globalAlpha = clamp(k, 0, 1); c.translate(x + w / 2, y + h / 2); c.scale(0.8 + 0.2 * k, 0.8 + 0.2 * k); c.translate(-w / 2, -h / 2);
+    c.beginPath(); c.moveTo(14, h - 2); c.lineTo(6, h + 9); c.lineTo(26, h - 2); c.closePath(); c.fillStyle = PAPER; c.fill(); c.lineWidth = 2.2; c.strokeStyle = INK; c.stroke();
+    rr(c, 0, 0, w, h, 11); c.fillStyle = PAPER; c.fill(); c.stroke(); c.fillRect(13, h - 4, 14, 4);
+    c.fillStyle = INK; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.text, w / 2, h / 2 + 0.5); c.restore();
+  }
+  function drawReady(c) {      // 手元の硬貨（これから投げる1枚）と、最初の案内
+    const g = S.g; if (S.screen !== 'play' || g.done) return; const sp = startPos(), def = K.COINS[S.sel], has = g.wallet[S.sel] > 0;
+    let ox = 0, oy = 0; if (S.ptr) { const dx = S.ptr.x - S.ptr.x0, dy = S.ptr.y - S.ptr.y0, d = Math.hypot(dx, dy) || 1, m = Math.min(d, 34) * 0.6; ox = dx / d * m; oy = dy / d * m; }
+    const bob = Math.sin(S.t * 3) * 2, r = def.r * sp.s;
+    if (S.keyAim) { const a = S.aim; c.save(); c.translate(sp.x, sp.y); c.rotate(a); c.setLineDash([5, 6]); c.lineWidth = 2.5; c.strokeStyle = 'rgba(255,246,226,.8)'; line(c, 0, -r - 8, 0, -r - 70); c.setLineDash([]); c.beginPath(); c.moveTo(-7, -r - 68); c.lineTo(0, -r - 80); c.lineTo(7, -r - 68); c.closePath(); c.fillStyle = PAPER; c.fill(); c.restore(); }
+    c.beginPath(); c.ellipse(sp.x, sp.y + r * 0.95, r * 0.9, r * 0.22, 0, 0, TAU); c.fillStyle = 'rgba(40,20,8,.25)'; c.fill();
+    c.globalAlpha = has ? (g.cool > 0 ? 0.55 : 1) : 0.25; drawCoin(c, sp.x + ox, sp.y + oy + bob, r, def, 0, true); c.globalAlpha = 1;
+    if (S.guide && S.threw < 2 && !S.ptr) { for (let i = 0; i < 3; i++) { const u = (S.t * 0.9 + i / 3) % 1, y = sp.y - r - 10 - u * 30; c.globalAlpha = Math.sin(u * Math.PI) * 0.95; c.beginPath(); c.moveTo(sp.x - 11, y + 8); c.lineTo(sp.x, y); c.lineTo(sp.x + 11, y + 8); c.lineWidth = 6.5; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = INK; c.stroke(); c.lineWidth = 3.5; c.strokeStyle = PAPER; c.stroke(); } c.globalAlpha = 1; }
+  }
+  const emaY = () => 62 + (H - 196 - 62) * 0.56, emaW = () => Math.min(268, (H - 196 - 62) * 0.86 / 1.06);
+  const emaRect = () => { const w = emaW(), h = w * 0.8, y = emaY(); return { x: 180 - w / 2, y: y - h / 2 - h * 0.26, w, h: h * 1.26 }; };      // 絵馬（ひもをふくむ）が画面のどこに出るか
+  function drawScene() {
+    const c = cx, g = S.g; c.setTransform(KP, 0, 0, KP, 0, 0); c.clearRect(0, 0, 360, H);
+    c.save(); if (S.shake > 0) c.translate((Math.random() - 0.5) * S.shake * 8, (Math.random() - 0.5) * S.shake * 6);
+    drawBg(c); const gp = godAt(); drawGod(c, gp.x, gp.y, gp.u, S.face, g ? g.level : 0, [!g, !g || g.hands.length < 2], bodyK()); drawBellProp(c);
+    drawCoins(c, K.FAR.z1, 99); boxBack(c, K.FAR); drawCoins(c, K.FAR.z0, K.FAR.z1); boxFront(c, K.FAR, '願い箱', 15);
+    if (g) drawHands(c, false);
+    drawCoins(c, K.NEAR.z1, K.FAR.z0); boxBack(c, K.NEAR); drawCoins(c, K.NEAR.z0, K.NEAR.z1); boxFront(c, K.NEAR, '500円未満', 17);
+    if (g) drawHands(c, true);
+    drawCoins(c, -9, K.NEAR.z0); drawReady(c); drawFx(c); drawBubble(c); c.restore();
+    if (S.screen === 'title' || S.screen === 'boot') { c.fillStyle = 'rgba(29,15,10,.5)'; c.fillRect(0, 0, 360, H); }
+    if (S.screen === 'result') {
+      const u = clamp((S.t - S.resultAt) / 0.7, 0, 1); c.fillStyle = `rgba(29,15,10,${0.72 * easeOut(u)})`; c.fillRect(0, 0, 360, H);
+      const k = 1 - Math.pow(1 - u, 3), sw = Math.sin((S.t - S.resultAt) * 5.5) * Math.max(0, 1 - (S.t - S.resultAt) / 1.6) * 0.09, y = lerp(-170, emaY(), k);
+      c.save(); c.translate(180, y - 150); c.rotate(sw); c.translate(-180, -(y - 150)); drawEma(c, 180, y, emaW(), { wish: S.wish, spent: g.spent, rank: S.rank.name, best: S.newBest, via: g.inVia }); c.restore();
+    }
+  }
+
+  /* ---------- 神様の表情を、いまの様子に合わせて少しずつ変える ---------- */
+  function faceStep(dt) {
+    const g = S.g, f = S.face, a = g ? g.att : null, lv = g ? g.level : 0; let open = 1, mouth = 0.05, lx = 0, ly = 0.15, sx = 0, brow = lv * 0.22;
+    f.alert = !!g && g.burn.gap && S.screen !== 'title'; f.helmet = g && g.burn.bonk && S.screen !== 'title' ? clamp((S.t - S.helmetAt) / 0.22, 0, 1) : 0;
+    f.blink -= dt; if (f.blink < 0) f.blink = 2 + Math.random() * 3; if (f.blink < 0.11 && (!a || a.mode === 'watch') && !f.alert) open = 0.05;      // まばたき（前ぶれと まぎらわしくないよう、見張っている時だけ）
+    for (const k of ['shock', 'smirk', 'bonk']) if (f[k] > 0) f[k] -= dt;
+    f.greedy = 0; f.q = 0;
+    if (S.screen === 'play' && g) {
+      let tc = null; for (const c of g.coins) if ((c.state === 'fly' || c.state === 'swat') && (!tc || c.id > tc.id)) tc = c;
+      if (tc) { lx = clamp(tc.x / 0.55, -1, 1); ly = clamp(1 - tc.z / 2.6, -0.5, 1); }
+      if (a.mode === 'tell') { const k = clamp(a.t / a.dur, 0, 1); if (a.kind === 'yawn') { open = Math.min(open, a.fake ? lerp(1, 0.66, k) : lerp(1, 0.36, k)); mouth = lerp(0.05, 0.42, k); if (!a.fake) ly = lerp(ly, -0.95, k); } else { lx = a.side * (a.fake ? 0.5 : 0.95) * k; sx = a.fake ? 0 : a.side * 0.45 * k; ly = -0.2 * k; } }      // 前ぶれ。「ふり」の時は、目がとじきらない・横目になりきらない
+      else if (a.mode === 'away') { if (a.kind === 'yawn') { open = 0; mouth = 1; } else if (a.kind === 'bell') { lx = -1; sx = -1; ly = -0.9; mouth = 0.3; open = 1.05; } else { lx = a.side; sx = a.side; ly = -0.35; } }
+      else if (a.mode === 'fake') { open = 1.05; lx = 0; ly = 0.3; }
+      if (g.coins.some(c => c.big && (c.state === 'fly' || c.state === 'held' || c.state === 'wait')) || (S.sel === K.BIG && g.wallet[K.BIG] > 0 && a.mode === 'watch' && !tc)) f.greedy = 1;
+      if (g.hands.some(h => h.state === 'chase' && h.wait > 0.03)) f.q = 1;
+      if (f.shock > 0) { open = 1.05; mouth = 0.55; }
+    } else if (S.screen === 'title' || S.screen === 'boot') { open = 0; mouth = 0.14 + 0.07 * Math.sin(S.t * 1.6); brow = -0.1; if (!S.zAt || S.t - S.zAt > 1.1) { S.zAt = S.t; const gp = godAt(); S.fx.push({ k: 'zzz', x: gp.x + gp.u * 0.42, y: gp.y - gp.u * 0.42, t0: S.t, dur: 2.2 }); } }
+    else { open = Math.min(open, 0.55); brow = -0.18; mouth = 0.04; ly = 0.5; }      // 3枚入れられたあと：しぶい顔
+    const k = Math.min(1, dt * 20); f.open += (open - f.open) * Math.min(1, dt * 30); f.mouth += (mouth - f.mouth) * k; f.lx += (lx - f.lx) * k; f.ly += (ly - f.ly) * k; f.sx += (sx - f.sx) * Math.min(1, dt * 12); f.brow += (brow - f.brow) * Math.min(1, dt * 8);
+  }
+
+  /* ============================================================
+     音（Web Audioで合成。BGMはなし）
+     ============================================================ */
+  let AC = null, OUT = null, NOISE = null, muted = false;
+  try { muted = localStorage.getItem(SAVE_MUTE) === '1'; } catch (e) { /* 保存が使えない環境では、毎回「音あり」から始まる */ }
+  function audioInit() {
+    try { if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); const b = AC.createBuffer(1, AC.sampleRate, AC.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; NOISE = b; OUT = AC.createGain(); OUT.gain.value = 0.8; OUT.connect(AC.destination); }
+      if (AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; }
+  }
+  function tone(f1, f2, dur, type, vol, delay) {
+    if (!AC || muted) return;
+    try { const t = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f1, t); if (f2 !== f1) o.frequency.exponentialRampToValueAtTime(Math.max(1, f2), t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(0.012, dur * 0.3)); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(OUT); o.start(t); o.stop(t + dur + 0.03); } catch (e) { /* 無視 */ }
+  }
+  function noise(dur, vol, type, freq, delay) {
+    if (!AC || muted || !NOISE) return;
+    try { const t = AC.currentTime + (delay || 0), s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = NOISE; s.loop = true; f.type = type || 'bandpass'; f.frequency.value = freq || 1500;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(0.02, dur * 0.25)); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); s.connect(f); f.connect(g); g.connect(OUT); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02); } catch (e) { /* 無視 */ }
+  }
+  const ping = (f, vol, d) => { tone(f, f * 0.995, 0.5, 'sine', vol, d); tone(f * 2.76, f * 2.75, 0.22, 'sine', vol * 0.5, d); tone(f * 5.4, f * 5.4, 0.1, 'sine', vol * 0.25, d); };      // 硬貨のチャリン
+  const sfx = {
+    ui() { tone(760, 760, 0.04, 'square', 0.03); },
+    pick() { tone(900, 1300, 0.06, 'triangle', 0.08); },
+    throw() { noise(0.16, 0.12, 'bandpass', 2600); tone(500, 900, 0.1, 'sine', 0.04); },
+    swat() { noise(0.09, 0.5, 'lowpass', 900); tone(220, 90, 0.14, 'square', 0.1); },
+    whiff() { noise(0.16, 0.14, 'highpass', 3200); },
+    clink(v) { ping(v >= 50 ? 2400 : v === 10 ? 1900 : v === 5 ? 2200 : 3100, 0.1); noise(0.07, 0.25, 'lowpass', 500, 0.02); },
+    drop() { ping(2700, 0.07); ping(3000, 0.04, 0.09); },
+    bonk() { tone(300, 120, 0.16, 'triangle', 0.25); noise(0.05, 0.2, 'lowpass', 700); },
+    bell() { for (let i = 0; i < 4; i++) { ping(2100 - i * 90, 0.11 - i * 0.02, i * 0.12); noise(0.05, 0.1, 'highpass', 5200, i * 0.12); } },      // 鈴がガランと鳴る
+    clang() { tone(1250, 900, 0.22, 'square', 0.07); tone(1870, 1500, 0.3, 'sine', 0.08); noise(0.06, 0.3, 'highpass', 3800); },      // かぶとに当たる
+    pop() { tone(240, 520, 0.09, 'triangle', 0.14); noise(0.05, 0.12, 'lowpass', 900, 0.05); },      // かぶとをかぶる
+    register() { tone(1568, 1568, 0.5, 'sine', 0.12); tone(2093, 2093, 0.6, 'sine', 0.1, 0.07); },
+    inBox(cheap) { ping(cheap ? 2600 : 2000, 0.14); noise(0.09, 0.3, 'lowpass', 380, 0.03); if (cheap) [0, 4, 7, 12].forEach((n, i) => tone(1047 * Math.pow(2, n / 12), 1047 * Math.pow(2, n / 12), 0.16, 'triangle', 0.07, 0.08 + i * 0.05)); },
+    yawn() { tone(420, 250, 0.9, 'sine', 0.09); tone(630, 380, 0.9, 'sine', 0.03); },
+    growl() { tone(95, 70, 0.5, 'sawtooth', 0.12); noise(0.4, 0.1, 'lowpass', 220); },
+    bells() { for (let i = 0; i < 9; i++) { ping(1800 + (i % 3) * 320, 0.06, i * 0.09); noise(0.05, 0.08, 'highpass', 5000, i * 0.09); } },      // 鈴をガラガラ
+    claps() { [1.0, 1.32].forEach(d => { noise(0.07, 0.5, 'bandpass', 1400, d); noise(0.12, 0.2, 'bandpass', 700, d); }); },      // 柏手を2回
+    result(good) { (good ? [0, 4, 7, 12, 16] : [0, 3, 7]).forEach((n, i) => tone(523 * Math.pow(2, n / 12), 523 * Math.pow(2, n / 12), 0.4, 'triangle', 0.09, i * 0.09)); },
+  };
+
+  /* ============================================================
+     画面の部品（上の表示・財布・案内）
+     ============================================================ */
+  const elHud = $('hud'), elSlots = $('slots'), elSpent = $('spent'), elWallet = $('wallet'), elHint = $('hint'), elTitle = $('pTitle'), elResult = $('pResult'), elWish = $('wish'), elBest = $('best'), elToast = $('toast');
+  const svg = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+  function setScreen(s) { S.screen = s; app.dataset.screen = s; elTitle.hidden = s !== 'title'; elHud.hidden = s !== 'play' && s !== 'ending'; elWallet.hidden = s !== 'play'; elResult.hidden = s !== 'result'; if (s !== 'play') elHint.hidden = true; }
+  function setHint(msg, ms) { clearTimeout(S.hintTimer); if (!msg) { elHint.hidden = true; return; } elHint.hidden = false; elHint.textContent = msg; elHint.classList.remove('pop'); void elHint.offsetWidth; elHint.classList.add('pop'); if (ms) S.hintTimer = setTimeout(() => { elHint.hidden = true; }, ms); }
+  let toastTimer = 0;
+  function toast(msg, ms) { elToast.textContent = msg; elToast.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { elToast.hidden = true; }, ms || 2600); }
+  function renderMute() { const b = $('btnMute'); b.setAttribute('aria-pressed', muted ? 'true' : 'false'); b.setAttribute('aria-label', muted ? '音を出す' : '音を消す');
+    b.innerHTML = svg('<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor"/>' + (muted ? '<path d="M16 9.5l5 5M21 9.5l-5 5"/>' : '<path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.6 7.6 0 0 1 0 11"/>')); }
+  function buildWallet() {
+    elWallet.textContent = '';
+    K.COINS.forEach((d, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'coin-btn'; b.dataset.i = i; b.style.setProperty('--c', LOOK[d.look][0]);
+      b.innerHTML = `<span class="face${d.hole ? ' hole' : ''}">${d.v}</span><span class="left"></span>`; onTap(b, () => selectCoin(i, true)); elWallet.appendChild(b); });
+  }
+  function renderWallet() {
+    const g = S.g; elWallet.querySelectorAll('.coin-btn').forEach((b, i) => { const n = g.wallet[i], d = K.COINS[i]; b.querySelector('.left').textContent = '×' + n; b.disabled = n <= 0; b.setAttribute('aria-pressed', i === S.sel ? 'true' : 'false'); b.setAttribute('aria-label', `${d.v}円玉（残り${n}枚）`); });
+  }
+  function renderSlots() {
+    const g = S.g; let h = '<span>願い箱</span>'; for (let i = 0; i < K.NEED; i++) { const v = g.inCoins[i]; if (v == null) h += '<i></i>'; else { const d = K.COINS.find(c => c.v === v); h += `<i class="on" style="--c:${LOOK[d.look][0]}">${v}</i>`; } } elSlots.innerHTML = h;
+    elSlots.setAttribute('aria-label', `願い箱に入った硬貨 ${g.inCount}枚（あと${K.NEED - g.inCount}枚）`);
+  }
+  function renderSpent(bump) { elSpent.textContent = S.g.spent; if (bump) { const p = elSpent.parentElement; p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); } }
+  function selectCoin(i, sound) {
+    if (S.screen !== 'play') return; const g = S.g; if (g.wallet[i] <= 0) { setHint(MSG.empty, 1600); return; }
+    S.sel = i; if (sound) { audioInit(); sfx.pick(); } renderWallet();
+  }
+  /* 神様のせりふ。前のせりふが出たばかりの時は、少し待ってから次を出す（「だまされた！」のすぐ後に「本気を出すぞ」が来ても、両方読めるように） */
+  function bubble(text, dur) { const b = S.bubble; if (b && S.t - b.t0 < 0.75) { S.bq = { text, dur }; return; } S.bq = null; S.bubble = { text, t0: S.t, dur: dur || 1.3 }; }
+  const fxText = (x, y, text, col, size) => S.fx.push({ k: 'txt', x: clamp(x, 34, 326), y, text, col, size: size || 14, t0: S.t, dur: 1.0 });
+
+  /* ---------- 投げる ---------- */
+  function doThrow(angle, power) {
+    const g = S.g; if (S.screen !== 'play' || g.done) return false; audioInit();
+    if (g.wallet[S.sel] <= 0) { const n = g.wallet.findIndex(v => v > 0); if (n < 0) return false; S.sel = n; renderWallet(); }
+    const c = K.throwCoin(g, S.sel, power > K.P_GOOD1 ? strongAngle(angle) : angle, power); if (!c) return false;
+    S.threw++; S.lastAct = S.t; if (S.threw === 1) setHint('', 0);
+    const b = elWallet.children[S.sel]; if (b) { b.classList.remove('used'); void b.offsetWidth; b.classList.add('used'); }
+    if (g.wallet[S.sel] <= 0) { const n = g.wallet.findIndex(v => v > 0); if (n >= 0) S.sel = n; }      // 使い切ったら、残っている中でいちばん安い硬貨に持ちかえる
+    return true;
+  }
+  /* うまくいかない時のヒント（それぞれ1回だけ）：あくびを待つ → 強くはじく → 鈴 → 続けて投げる → 銀色の硬貨。
+     idle＝「すき」が通じなくなったのに、投げずに待ち続けている時（はたかれた回数に関係なく、次のヒントを出す） */
+  function tips(idle) {
+    const g = S.g, T = S.tips, since = idle ? 99 : g.count.swat - (T.at || 0); let m = '';
+    if (!T.yawn && !g.burn.gap && since >= 2) { T.yawn = 1; m = MSG.tipYawn; }
+    else if (!T.strong && g.burn.gap && !g.burn.bonk && since >= 2) { T.strong = 1; m = MSG.tipStrong; }
+    else if (!T.bell && g.bell === 'ready' && g.burn.gap && (g.burn.bonk || T.strong) && since >= 3) { T.bell = 1; m = MSG.tipBell; }
+    else if (!T.decoy && g.hands.length === 1 && g.inCount >= 1 && since >= 3) { T.decoy = 1; m = MSG.tipDecoy; }
+    else if (!T.silver && g.wallet[0] + g.wallet[1] + g.wallet[2] <= 2 && (g.wallet[3] > 0 || g.wallet[4] > 0)) { T.silver = 1; m = MSG.tipSilver; }
+    else if (idle) m = MSG.burnGap;
+    if (m) { T.at = g.count.swat; setTimeout(() => { if (S.screen === 'play') setHint(m, 3600); }, idle ? 0 : 700); }
+  }
+  /* ---------- しくみの側で起きたことを、絵と音にする ---------- */
+  function onEvents() {
+    const g = S.g; if (!g.ev.length) return; const evs = g.ev; g.ev = [];
+    for (const e of evs) {
+      const c = e.coin, p = c ? proj(c.x, c.y, c.z) : null;
+      if (e.type === 'throw') { sfx.throw(); renderSpent(true); renderWallet(); }
+      else if (e.type === 'swat') { sfx.swat(); S.slap[e.hand] = S.t; tips(); S.fx.push({ k: 'burst', x: p.x, y: p.y, col: PAPER, t0: S.t, dur: 0.3 }); S.shake = 0.3; if (S.t - (S.fakeAt || -9) < 1.0) { S.skipSay = true; bubble(pick(LINES.gotcha)); S.face.smirk = 0.7; } }
+      else if (e.type === 'pass') { if (e.seen) { sfx.whiff(); fxText(p.x, p.y + 4, 'スカッ', PAPER, 13); } }
+      else if (e.type === 'near') { c._t = S.t; sfx.clink(c.v); fxText(p.x, p.y - 6, `−${c.v}円`, '#ff9a80', c.v >= 100 ? 17 : 14); if (!e.swatted && S.threw <= 4) setHint(MSG.weak, 2200); }
+      else if (e.type === 'ground') { sfx.drop(); fxText(p.x, e.lost ? Math.min(p.y, proj(0, K.NEAR.top, K.NEAR.z1).y) - 12 : p.y - 8, `−${c.v}円`, '#ff9a80', c.v >= 100 ? 17 : 14); if (c.band === 'far' && S.threw <= 8) setHint(MSG.side, 2200); }
+      else if (e.type === 'over') { c._t = S.t; if (e.face) { sfx.bonk(); S.face.bonk = 0.3; S.face.shock = 0.35; } else sfx.whiff(); fxText(p.x, p.y, `−${c.v}円`, '#ff9a80', c.v >= 100 ? 17 : 14); if (S.threw <= 12) setHint(g.burn.bonk && g.bell !== 'ready' ? MSG.strong : MSG.strong2, 2400); }
+      else if (e.type === 'bonk') { sfx.bonk(); sfx.clink(c.v); S.face.bonk = 0.45; S.face.shock = 0.5; S.shake = 0.45; S.helmetAt = S.t + 0.62; S.fx.push({ k: 'burst', x: p.x, y: p.y, col: GOLD, t0: S.t, dur: 0.35 }, { k: 'spark', x: p.x, y: p.y - 6, t0: S.t, dur: 0.6 }); setTimeout(() => { if (S.g === g && g.burn.bonk) sfx.pop(); }, 620); }
+      else if (e.type === 'helmet') { sfx.clang(); S.shake = 0.25; S.fx.push({ k: 'burst', x: p.x, y: p.y, col: PAPER, t0: S.t, dur: 0.3 }); fxText(p.x, p.y - 16, 'カン！', PAPER, 15); }
+      else if (e.type === 'bell') { const b = bellAt(); sfx.bell(); S.bellAt = S.t; S.fx.push({ k: 'ring', x: b.x, y: b.y, t0: S.t, dur: 0.7 }, { k: 'ring', x: b.x, y: b.y, t0: S.t + 0.18, dur: 0.7 }); fxText(b.x + 6, b.y - b.r - 14, e.sweet ? 'ど真ん中！' : 'ガラン', GOLD, e.sweet ? 17 : 15); if (!e.sweet) setHint(MSG.bellRing, 2000); }
+      else if (e.type === 'bellGone') { S.bellOff = S.t; bubble(pick(LINES.bellGone), 1.2); }
+      else if (e.type === 'burn') { if (e.key === 'gap') S.burnSay = 'burnGap'; else if (e.key === 'bonk') S.burnSay = 'burnBonk'; const m = e.key === 'gap' ? MSG.burnGap : e.key === 'bonk' ? MSG.burnBonk : MSG.burnBell; setTimeout(() => { if (S.g === g && S.screen === 'play') setHint(m, 2800); }, e.key === 'bell' ? 100 : 900); }
+      else if (e.type === 'grab') sfx.register();
+      else if (e.type === 'in') { c._t = S.t; sfx.inBox(e.cheap); renderSlots(); const q = proj(c.x, K.FAR.top, 3.6); S.fx.push({ k: 'spark', x: q.x, y: q.y, t0: S.t, dur: 0.6 }); fxText(q.x, q.y - 14, e.count >= K.NEED ? '3枚そろった！' : `入った！ あと${K.NEED - e.count}枚`, GOLD, 15); if (e.cheap) S.face.shock = 0.7;
+        const sh = VIA[e.via] && !(e.via === 'bell' && c.sweet) ? VIA[e.via].shout : ''; if (sh) S.fx.push({ k: 'txt', x: clamp(q.x, 60, 300), y: q.y - 36, text: sh, col: PAPER, size: 17, t0: S.t, dur: 1.3 }); }
+      else if (e.type === 'level') sfx.growl();
+      else if (e.type === 'att') { if (e.mode === 'away') { if (e.kind === 'yawn') { sfx.yawn(); bubble(pick(LINES.yawn), 1.0); } else bubble(pick(e.kind === 'bell' ? LINES.bell : LINES.look), 1.0); } else if (e.mode === 'tell' && e.kind === 'look') S.fx.push({ k: 'bfly', side: e.side, t0: S.t, dur: 1.9 }); else if (e.mode === 'fake') S.fakeAt = S.t; }
+      else if (e.type === 'say') { if (S.skipSay) { S.skipSay = false; continue; } let key = e.key; if (S.burnSay && /^angry/.test(key)) { key = S.burnSay; S.burnSay = ''; } bubble(pick(LINES[key])); }      // 手口を覚えた直後は、「もう通じない」のせりふ
+      else if (e.type === 'done') finish();
+    }
+  }
+
+  /* ============================================================
+     遊びの流れ：タイトル → お参り → 3枚入った → 結果（絵馬）
+     ============================================================ */
+  function showTitle() {
+    S.g = K.newGame(1); S.fx = []; S.bubble = null; S.bq = null; S.bellAt = -9; S.bellOff = -9; setScreen('title'); elWish.value = S.wish;
+    if (S.best != null) { elBest.hidden = false; elBest.innerHTML = `自己ベスト <b>${S.best}円</b>（${K.rankOf(S.best).name}）`; } else elBest.hidden = true;
+  }
+  function start(seed) {
+    if (S.screen !== 'title' && S.screen !== 'result') return; audioInit(); sfx.ui();
+    S.wish = (S.screen === 'title' ? elWish.value : S.wish).trim().slice(0, WISH_MAX); elWish.blur();
+    S.g = K.newGame(seed || ((Math.random() * 2147483646) | 0) + 1); S.sel = 0; S.aim = 0; S.keyAim = false; S.fx = []; S.bubble = null; S.bq = null; S.ptr = null; S.threw = 0; S.newBest = false; S.rank = null; S.fakeAt = -9; S.skipSay = false; S.slap = [-9, -9]; S.tips = {}; S.bellAt = -9; S.bellOff = -9; S.helmetAt = 0; S.burnSay = ''; S.lastAct = S.t;
+    S.face.shock = 0; S.face.smirk = 0; setScreen('play'); renderWallet(); renderSlots(); renderSpent(false); setHint(MSG.pick, 0);
+  }
+  function finish() {      // 3枚目が入った瞬間
+    setScreen('ending'); S.endAt = S.t; S.ptr = null; sfx.bells(); sfx.claps(); setTimeout(() => { if (S.screen === 'ending') bubble(pick(LINES.done), 1.6); }, 550);
+  }
+  function showResult() {
+    const g = S.g; S.rank = K.rankOf(g.spent); S.newBest = S.best == null || g.spent < S.best;
+    if (S.newBest) { S.best = g.spent; try { localStorage.setItem(SAVE_BEST, String(S.best)); } catch (e) { /* 保存できない環境では、この回かぎりの記録 */ } }
+    $('rankDesc').textContent = S.rank.desc; $('tally').textContent = `手口：${g.inVia.map(k => VIA[k].stamp).join('→')}・自己ベスト ${S.best}円`;
+    S.resultAt = S.t; S.bubble = null; S.bq = null; setScreen('result'); elResult.classList.remove('fade-in'); void elResult.offsetWidth; elResult.classList.add('fade-in'); sfx.result(g.spent <= 50);
+  }
+  function again() { if (S.screen !== 'result') return; start(0); }
+  function toTitle() { if (S.screen !== 'result') return; audioInit(); sfx.ui(); showTitle(); }
+
+  /* ---------- 画像の保存とシェア ---------- */
+  function composeShare() {
+    const g = S.g, cvs = mk(1080, 1350), c = cvs.getContext('2d'), bg = c.createLinearGradient(0, 0, 0, 1350); bg.addColorStop(0, '#6a2114'); bg.addColorStop(1, '#2a120c'); c.fillStyle = bg; c.fillRect(0, 0, 1080, 1350);
+    const r = K.rng(g.seed + g.spent); for (let i = 0; i < 16; i++) { const d = K.COINS[(r() * 6) | 0], x = r() * 1080, y = r() * 1350, s = 26 + r() * 30; c.globalAlpha = 0.16; drawCoin(c, x, y, s, d, r() * 1.2, false); } c.globalAlpha = 1;
+    const gl = c.createRadialGradient(540, 700, 80, 540, 700, 640); gl.addColorStop(0, 'rgba(255,214,120,.34)'); gl.addColorStop(1, 'rgba(255,214,120,0)'); c.fillStyle = gl; c.fillRect(0, 0, 1080, 1350);
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = GOLD; c.font = `800 34px ${FONT_BODY}`; c.fillText('硬貨3枚で願いが叶う神社', 540, 62);
+    c.font = `400 96px ${FONT_LOGO}`; c.fillStyle = INK; c.fillText(GAME_TITLE, 540, 150); c.fillStyle = SHU; c.fillText(GAME_TITLE, 540, 144); c.fillStyle = PAPER; c.fillText(GAME_TITLE, 540, 136);
+    drawEma(c, 540, 742, 880, { wish: S.wish, spent: g.spent, rank: S.rank.name, best: S.newBest, via: g.inVia });
+    drawGod(c, 196, g.burn.bonk ? 1286 : 1262, 250, { open: 0.5, mouth: 0.04, lx: 0.5, ly: -0.4, brow: -0.2, sx: 0, shock: 0, greedy: 0, smirk: 0, q: 0, bonk: 0, alert: false, helmet: g.burn.bonk ? 1 : 0 }, 0);
+    c.textAlign = 'right'; c.fillStyle = PAPER; c.font = `400 40px ${FONT_LOGO}`; c.fillText(HASHTAG, 1040, 1248); c.fillStyle = '#d9c3a3'; c.font = `800 26px ${FONT_BODY}`; c.fillText(SHARE_URL ? SHARE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') : CREDIT, 1040, 1304);
+    return cvs;
+  }
+  function toBlob(cvs) { return new Promise(res => { let done = false; const fin = b => { if (!done) { done = true; res(b); } };
+    try { cvs.toBlob(b => fin(b), 'image/png'); } catch (e) { /* 下の方法で作る */ }
+    setTimeout(() => { if (done) return; try { const u = cvs.toDataURL('image/png'), bin = atob(u.split(',')[1]), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); fin(new Blob([arr], { type: 'image/png' })); } catch (e) { fin(null); } }, 1200); }); }
+  async function shareBlob() {
+    try { if (document.fonts && document.fonts.load) await Promise.race([Promise.all([document.fonts.load('400 60px "Dela Gothic One"', GAME_TITLE + HASHTAG + S.rank.name + '0123456789円新記録'), document.fonts.load('800 40px "Shippori Mincho B1"', '「」願い事がで叶った' + S.wish), document.fonts.load('800 30px "M PLUS Rounded 1c"', '硬貨3枚で願いが叶う神社' + CREDIT)]), new Promise(r => setTimeout(r, 1500))]); } catch (e) { /* 字が読みこめなくても、代わりの字で作る */ }
+    return toBlob(composeShare());
+  }
+  const shareText = () => `${GAME_TITLE}\n${S.wish ? `「${S.wish}」が` : '願い事が'} ${S.g.spent}円 で叶った。【${S.rank.name}】\n手口：${S.g.inVia.map(k => VIA[k].long).join(' → ')}\n${HASHTAG}`;
+  let dlPromise = null;
+  function getDownloads() { if (!dlPromise) { try { dlPromise = (window.claude && typeof window.claude.use === 'function') ? Promise.resolve(window.claude.use('downloads')).catch(() => null) : Promise.resolve(null); } catch (e) { dlPromise = Promise.resolve(null); } } return dlPromise; }
+  async function saveBlob(blob, quiet) {       // 画像を端末に保存する。成功したら true
+    const name = 'kechi-mairi.png';
+    try { const dl = await getDownloads(); if (dl) { await dl.save({ filename: name, data: blob }); if (!quiet) toast('画像を保存しました'); return true; } } catch (e) { if (e && e.code === 'declined') { toast('保存をやめました'); return false; } }
+    try { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); if (!quiet) toast('画像を保存しました'); return true; } catch (e) { toast('この環境では保存できませんでした'); return false; }
+  }
+  let sharing = false;
+  async function doSave() { if (sharing || S.screen !== 'result') return; sharing = true; sfx.ui(); try { const b = await shareBlob(); if (b) await saveBlob(b); else toast('画像を作れませんでした'); } finally { sharing = false; } }
+  async function doShare() {
+    if (sharing || S.screen !== 'result') return; sharing = true; sfx.ui();
+    try {
+      const b = await shareBlob(), text = shareText() + (SHARE_URL ? `\n${SHARE_URL}` : '');
+      if (b && navigator.canShare && typeof File === 'function') { const file = new File([b], 'kechi-mairi.png', { type: 'image/png' });
+        let can = false; try { can = navigator.canShare({ files: [file] }); } catch (e) { /* 使えない */ }
+        if (can) { try { await navigator.share({ files: [file], text }); return; } catch (e) { if (e && e.name === 'AbortError') return; /* 共有メニューが開けなかった時は、下の方法に切りかえる */ } } }
+      // 共有メニューが使えない端末（パソコンなど）：画像を保存して、Xの投稿画面を開く（画像は自分で添付する）
+      const saved = b ? await saveBlob(b, true) : false, a = document.createElement('a'); a.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText()) + (SHARE_URL ? '&url=' + encodeURIComponent(SHARE_URL) : ''); a.target = '_blank'; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove(); toast(saved ? '画像を保存しました。Xの投稿画面で、保存した画像を添付してください' : 'Xの投稿画面を開きました', 5200);
+    } finally { sharing = false; }
+  }
+
+  /* ---------- ボタンを押した時 ----------
+     指やマウスを離した時に、すぐ反応する（すばやく はじいた直後は、ブラウザーが次のタップの「クリック」を出さないことがあるので、クリックだけには頼らない）。
+     キーボードで押した時は、クリックで反応する。「画像を保存」「シェア」は、ブラウザーの決まりでクリックの時にしか動かせないので、そのまま */
+  function onTap(el, fn) {
+    let down = null, at = -1e9;
+    el.addEventListener('pointerdown', e => { down = e.isPrimary && (e.pointerType !== 'mouse' || e.button === 0) ? { id: e.pointerId, x: e.clientX, y: e.clientY } : null; });
+    el.addEventListener('pointerup', e => { const d = down; down = null; if (!d || d.id !== e.pointerId || el.disabled) return; const r = el.getBoundingClientRect();
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 14 * SC || e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+      at = performance.now(); fn(e); });
+    el.addEventListener('pointercancel', () => { down = null; });
+    el.addEventListener('click', e => { if (performance.now() - at < 800) return; fn(e); });
+  }
+
+  /* ---------- 指・マウス：舞台の上で、上に向かってすばやく動かして離すと「はじく」 ---------- */
+  const pos = e => { const r = app.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * 360, y: (e.clientY - r.top) / r.height * H, t: e.timeStamp / 1000 }; };
+  let activeId = null;
+  app.addEventListener('pointerdown', e => {
+    if (S.screen !== 'play' || (activeId !== null && e.pointerId !== activeId)) return;
+    if (e.target.closest && e.target.closest('button, input')) return;      // 財布や音のボタンは、ボタンにまかせる
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    audioInit(); const p = pos(e); activeId = e.pointerId; S.keyAim = false; S.ptr = { x0: p.x, y0: p.y, x: p.x, y: p.y, pts: [p] };
+    try { app.setPointerCapture(e.pointerId); } catch (er) { /* 無視 */ } e.preventDefault();
+  });
+  app.addEventListener('pointermove', e => { if (!S.ptr || e.pointerId !== activeId) return; const p = pos(e); S.ptr.x = p.x; S.ptr.y = p.y; S.ptr.pts.push(p); if (S.ptr.pts.length > 40) S.ptr.pts.shift(); });
+  function release(e, cancel) {
+    if (e.pointerId !== activeId) return; activeId = null; const pt = S.ptr; S.ptr = null; if (!pt || cancel || S.screen !== 'play') return;
+    const p = pos(e), pts = pt.pts, lm = pts[pts.length - 1], held = p.t - lm.t;      // held＝最後に動かしてから離すまでの時間
+    if (Math.hypot(p.x - lm.x, p.y - lm.y) > 0.5) pts.push(p);                   // 離した場所が最後の動きと同じなら、速さは「最後に動いていた時」ので測る
+    const last = pts[pts.length - 1]; let i = pts.length - 1; while (i > 0 && last.t - pts[i - 1].t <= 0.1) i--;
+    const a = pts[i], dt = Math.max(0.016, last.t - a.t), vx = (last.x - a.x) / dt, vy = (last.y - a.y) / dt, up = pt.y0 - last.y, speed = Math.hypot(vx, vy);
+    if (up < FLICK_MIN_UP) return;                                              // タップや、下向きの動きは「はじいた」ことにしない
+    if (held > 0.15 || -vy < FLICK_MIN_SPEED) { setHint(MSG.slow, 1800); return; }      // ゆっくり動かした・止めてから離した
+    const big = e.pointerType === 'mouse' ? 1 : Math.sqrt(Math.max(1, SC));      // 指で遊ぶ時、画面が大きい（タブレットなど）と同じ強さを出すのに指を速く動かす必要があるので、そのぶんを少しおまけする
+    doThrow(clamp(Math.atan2(vx, -vy), -0.62, 0.62), Math.pow(speed * big / FLICK_IDEAL, 0.6));
+  }
+  app.addEventListener('pointerup', e => release(e, false));
+  app.addEventListener('pointercancel', e => release(e, true));
+  window.addEventListener('blur', () => { activeId = null; S.ptr = null; });
+  app.addEventListener('contextmenu', e => e.preventDefault());
+  /* キーボード：1〜6で硬貨をえらぶ、←→で向き、↑かスペースで投げる（Shiftを押しながらだと強く投げる） */
+  document.addEventListener('keydown', e => {
+    if (S.screen !== 'play' || e.target === elWish || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key >= '1' && e.key <= '6') { selectCoin(+e.key - 1, true); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { S.aim = clamp(S.aim + (e.key === 'ArrowLeft' ? -0.08 : 0.08), -0.32, 0.32); S.keyAim = true; e.preventDefault(); }
+    else if (e.key === 'ArrowUp' || e.key === ' ') { S.keyAim = true; doThrow(S.aim, e.shiftKey ? STRONG_KEY : 1.05); e.preventDefault(); }      // Shiftを押しながらだと、強く投げる
+  });
+  onTap($('btnStart'), () => start(0));
+  onTap($('btnAgain'), again);
+  onTap($('btnTitle'), toTitle);
+  $('btnSave').addEventListener('click', doSave);
+  $('btnShare').addEventListener('click', doShare);
+  onTap($('btnMute'), () => { muted = !muted; try { localStorage.setItem(SAVE_MUTE, muted ? '1' : '0'); } catch (e) { /* 無視 */ } renderMute(); if (!muted) { audioInit(); sfx.ui(); } });
+  elWish.addEventListener('keydown', e => { if (e.key === 'Enter') elWish.blur(); });
+  elWish.addEventListener('input', () => { if (elWish.value.length > WISH_MAX) elWish.value = elWish.value.slice(0, WISH_MAX); });
+
+  /* ---------- メインループ ---------- */
+  const STEP = 1 / 120; let lastT = now(), acc = 0;
+  function frame() {
+    requestAnimationFrame(frame);
+    const t = now(), dt = Math.min(0.05, t - lastT); lastT = t; fit(); S.t += dt; if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 1.6);
+    if (S.g && (S.screen === 'play' || S.screen === 'ending') && !S.freeze) { acc += dt; while (acc >= STEP) { K.step(S.g, STEP); acc -= STEP; onEvents(); } }
+    if (S.screen === 'play' && S.g.burn.gap && !S.g.done && S.t - S.lastAct > IDLE_TIP) { S.lastAct = S.t; tips(true); }      // 「すき」がもう通じないのに待ち続けている時は、ほかの手口のヒントを出す
+    if (S.screen === 'ending' && S.t - S.endAt >= END_WAIT) showResult();
+    faceStep(dt); if (S.g) drawScene();
+    S.ms += (now() - t - S.ms) * 0.05;      // 1コマを描くのにかかった秒数（ならした値。動作の重さを調べる時に見る）
+  }
+  function boot() {
+    try { const v = localStorage.getItem(SAVE_BEST); if (v != null && v !== '' && isFinite(+v)) S.best = +v; } catch (e) { /* 無視 */ }
+    renderMute(); buildWallet(); getDownloads(); fit(); showTitle(); $('btnStart').disabled = false; requestAnimationFrame(frame);
+    try { if (document.fonts && document.fonts.load) { const all = Object.values(LINES).flat().join('') + Object.values(MSG).join('') + K.RANKS.map(r => r.name + r.desc).join('');
+      document.fonts.load('400 30px "Dela Gothic One"', GAME_TITLE + '願い箱500円未満入った！あと枚そろった−スカッ新記録?¥z0123456789カンガラど真ん中' + Object.values(VIA).map(v => v.stamp + v.shout).join('') + K.RANKS.map(r => r.name).join('')).catch(() => {}); [700, 800, 900].forEach(w => document.fonts.load(w + ' 14px "M PLUS Rounded 1c"', all).catch(() => {})); document.fonts.load('800 30px "Shippori Mincho B1"', '「」願い事がで叶った').catch(() => {}); } } catch (e) { /* 無視 */ }
+  }
+  boot();
+  return { S, K, LINES, MSG, VIA, strongAngle, bellAt, start, again, toTitle, doThrow, selectCoin, composeShare, shareText, proj, startPos, godAt, showResult, fit, emaRect, bubble, FONT_BODY, get H() { return H; }, get SC() { return SC; } };
+})();
+window.__km = APP;
+</script>
+</body>
+</html>
