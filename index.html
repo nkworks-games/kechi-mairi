@@ -3,7 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}</style>
+<meta name="google-adsense-account" content="ca-pub-2073267239630350">
+<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+/* 広告の帯：画面のいちばん下。iPhoneのホームバーと重ならないよう、そのぶん下を空ける。広告が出ていなくても、この高さは変わらない */
+:root{--ad-h:50px;--ad-gap:75px}   /* 帯の高さ（スマホ50px）と、帯とゲームの間（いつも75px） */
+@media (orientation:landscape) and (min-width:728px) and (min-height:500px){:root{--ad-h:90px}}   /* 横長の画面（パソコン・横向きのタブレット）では帯を90pxに */
+#ad-zone{position:fixed;left:0;right:0;bottom:0;z-index:10;height:var(--ad-h);padding-bottom:env(safe-area-inset-bottom,0px);background:#1c0b07;box-shadow:0 -1px 0 rgba(255,255,255,.08);touch-action:manipulation;-webkit-user-select:auto;user-select:auto}
+#ad-banner{width:100%;height:var(--ad-h);overflow:hidden;display:flex;align-items:center;justify-content:center;max-height:var(--ad-h);contain:layout paint}
+#ad-banner ins{max-height:var(--ad-h)!important;overflow:hidden}
+#ad-banner ins.adsbygoogle[data-ad-status="unfilled"]{display:none!important}   /* 広告が来ない時は 空の四角を出さない（帯の高さは そのまま） */
+
+</style>
 <meta name="description" content="硬貨を3枚入れたら願いが叶う神社。ただし神様は、500円玉より安い硬貨をはたき落とす。神様をだまして、できるだけ安くお参りするゲーム。">
 <meta name="theme-color" content="#2a120c">
 <title>ケチ参り</title>
@@ -107,6 +117,25 @@ button { cursor: pointer; touch-action: manipulation; -webkit-appearance: none; 
 <!-- nkw-ikkaku --><style>.nkw-ikk{display:inline-block;box-sizing:border-box;max-width:92vw;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid rgba(60,90,120,.35);color:#3c5a78;font:500 12.5px/1.4 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif;text-decoration:none;white-space:nowrap;letter-spacing:.02em}#pResult .nkw-ikk{display:block;width:max-content;margin:12px auto 0}</style>
 </head>
 <body>
+<!-- ▼広告バナーの場所（画面のいちばん下の帯）
+     ・帯の高さ：スマホは50px、横長の画面（パソコンなど）は90px。ゲームとの間は いつも75pxあけてあります
+     ・広告が出ない時も、この帯の高さは そのまま残ります（ゲームの位置は ずれません）
+     ・ゲームの操作は、この帯の上では反応しません -->
+<div id="ad-zone">
+  <div id="ad-banner">
+    <!-- ↓↓↓ AdSense の広告ユニットのコード（全ゲーム共通「ゲーム用バナー」・固定サイズ 320×50）↓↓↓ -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2073267239630350"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:320px;height:50px"
+         data-ad-client="ca-pub-2073267239630350"
+         data-ad-slot="6261635446"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <!-- ↑↑↑ ここまで ↑↑↑ -->
+  </div>
+</div>
 <div id="app" data-screen="boot">
   <canvas id="cv" role="img" aria-label="神社の賽銭箱と神様"></canvas>
   <div class="hud" id="hud" hidden>
@@ -457,9 +486,10 @@ const APP = (() => {
   let H = 640, SC = 1, KP = 1;
   const PJ = { D: 3.2, EYE: 1.5, FX: 990, FY: 974, hz: 70 };
   function fit() {
-    const b = document.body.getBoundingClientRect(), vw = Math.max(1, b.width), vh = Math.max(1, b.height);
+    const b = document.body.getBoundingClientRect(), az = document.getElementById('ad-zone'), vw = Math.max(1, b.width), vh = Math.max(1, (az ? az.getBoundingClientRect().top - 75 : b.bottom) - b.top);   // vh＝広告の帯と すき間（75px）より上の高さ
     const sc = Math.min(vw / 360, vh / 600), h = Math.round(Math.min(800, vh / sc));
-    if (sc !== SC || h !== H) { SC = sc; H = h; app.style.setProperty('--s', SC.toFixed(4)); app.style.setProperty('--h', H); app.style.left = (b.left + vw / 2) + 'px'; app.style.top = (b.top + vh / 2) + 'px'; }
+    if (sc !== SC || h !== H) { SC = sc; H = h; app.style.setProperty('--s', SC.toFixed(4)); app.style.setProperty('--h', H); }
+    const ax = (b.left + vw / 2) + 'px', ay = (b.top + vh / 2) + 'px'; if (app.style.left !== ax) app.style.left = ax; if (app.style.top !== ay) app.style.top = ay;   // 場所だけ変わった時（帯の高さが変わった時など）も 置き直す
     PJ.hz = 74 + (H - 600) * 0.14; PJ.FY = (H - 114 - PJ.hz) * PJ.D / PJ.EYE;
     const k = Math.min(3, SC * Math.min(window.devicePixelRatio || 1, 2.5), Math.sqrt(2.6e6 / (360 * H))), w = Math.round(360 * k), hh = Math.round(H * k);
     if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; } KP = k;
@@ -780,7 +810,7 @@ const APP = (() => {
     c.globalAlpha = has ? (g.cool > 0 ? 0.55 : 1) : 0.25; drawCoin(c, sp.x + ox, sp.y + oy + bob, r, def, 0, true); c.globalAlpha = 1;
     if (S.guide && S.threw < 2 && !S.ptr) { for (let i = 0; i < 3; i++) { const u = (S.t * 0.9 + i / 3) % 1, y = sp.y - r - 10 - u * 30; c.globalAlpha = Math.sin(u * Math.PI) * 0.95; c.beginPath(); c.moveTo(sp.x - 11, y + 8); c.lineTo(sp.x, y); c.lineTo(sp.x + 11, y + 8); c.lineWidth = 6.5; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = INK; c.stroke(); c.lineWidth = 3.5; c.strokeStyle = PAPER; c.stroke(); } c.globalAlpha = 1; }
   }
-  const emaY = () => 62 + (H - 196 - 62) * 0.56, emaW = () => Math.min(268, (H - 196 - 62) * 0.86 / 1.06);
+  const emaY = () => 62 + (H - 244 - 62) * 0.56, emaW = () => Math.min(268, (H - 244 - 62) * 0.86 / 1.06);   // 244＝下の結果の欄（説明・ボタン・「一画一会」リンク）の高さぶん
   const emaRect = () => { const w = emaW(), h = w * 0.8, y = emaY(); return { x: 180 - w / 2, y: y - h / 2 - h * 0.26, w, h: h * 1.26 }; };      // 絵馬（ひもをふくむ）が画面のどこに出るか
   function drawScene() {
     const c = cx, g = S.g; c.setTransform(KP, 0, 0, KP, 0, 0); c.clearRect(0, 0, 360, H);
