@@ -6,8 +6,8 @@
 <meta name="google-adsense-account" content="ca-pub-2073267239630350">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
 /* 広告の帯：画面のいちばん下。iPhoneのホームバーと重ならないよう、そのぶん下を空ける。広告が出ていなくても、この高さは変わらない */
-:root{--ad-h:50px;--ad-gap:75px}   /* 帯の高さ（スマホ50px）と、帯とゲームの間（いつも75px） */
-@media (orientation:landscape) and (min-width:728px) and (min-height:500px){:root{--ad-h:90px}}   /* 横長の画面（パソコン・横向きのタブレット）では帯を90pxに */
+:root{--ad-h:0px;--ad-gap:0px}   /* 帯の高さ（スマホ50px）と、帯とゲームの間（いつも75px） */
+@media (orientation:landscape) and (min-width:728px) and (min-height:500px){:root{--ad-h:0px}}   /* 横長の画面（パソコン・横向きのタブレット）では帯を90pxに */
 #ad-zone{position:fixed;left:0;right:0;bottom:0;z-index:10;height:var(--ad-h);padding-bottom:env(safe-area-inset-bottom,0px);background:#1c0b07;box-shadow:0 -1px 0 rgba(255,255,255,.08);touch-action:manipulation;-webkit-user-select:auto;user-select:auto}
 #ad-banner{width:100%;height:var(--ad-h);overflow:hidden;display:flex;align-items:center;justify-content:center;max-height:var(--ad-h);contain:layout paint}
 #ad-banner ins{max-height:var(--ad-h)!important;overflow:hidden}
@@ -118,14 +118,7 @@ button { cursor: pointer; touch-action: manipulation; -webkit-appearance: none; 
 <style>/* nkw-info：説明ページへのリンク */.nkw-info{display:inline-block;margin-left:.8em;padding:6px 2px;color:inherit;text-decoration:underline;text-underline-offset:2px;pointer-events:auto;letter-spacing:.06em;-webkit-user-select:none;user-select:none}</style>
 </head>
 <body>
-<!-- ▼広告バナーの場所（画面のいちばん下の帯）
-     ・帯の高さ：スマホは50px、横長の画面（パソコンなど）は90px。ゲームとの間は いつも75pxあけてあります
-     ・広告が出ない時も、この帯の高さは そのまま残ります（ゲームの位置は ずれません）
-     ・ゲームの操作は、この帯の上では反応しません -->
-<div id="ad-zone">
-  <div id="ad-banner"><!-- 広告は一時停止中：AdSenseのサイト審査が通るまで、ゲーム画面では広告を読み込みません（帯と余白はそのまま）。審査後にこの変更を元に戻します -->
-  </div>
-</div>
+<!-- ゲーム中の広告バナーはなし（細かい操作が必要なため。2026-10-29） -->
 <div id="app" data-screen="boot">
   <canvas id="cv" role="img" aria-label="神社の賽銭箱と神様"></canvas>
   <div class="hud" id="hud" hidden>
